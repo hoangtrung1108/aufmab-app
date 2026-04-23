@@ -175,7 +175,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Ro
 <!-- ==================== SCREEN 1: MEASUREMENT CARDS (Bìa) ==================== -->
 <div class="screen active" id="s1">
   <div class="hdr">
-    <span class="ttl">AufmaB Beta <span style="font-size:10px;opacity:0.7">v46</span></span>
+    <span class="ttl">AufmaB Beta <span style="font-size:10px;opacity:0.7">v47</span></span>
     <span id="offlineBadge" style="display:none;font-size:11px;background:#ef5350;color:#fff;border-radius:12px;padding:2px 8px;margin-left:4px">📡 Offline</span>
     <span class="badge" id="syncBadge" style="display:none">0</span>
     <button onclick="exportExcel()" title="Excel Export" style="background:#2e7d32;border:none;color:#fff;font-size:11px;font-weight:700;cursor:pointer;padding:3px 8px;border-radius:4px;flex-shrink:0">&#128202;XL</button>
@@ -1877,9 +1877,10 @@ async function saveAndSync(){
       // Step 2: Build dem_le records
       btn.textContent='Syncing data...';
       var allD=await dbIdx('dem_le','ma_phong',curPhong.ma_phong);
-      // Chỉ push record có số liệu thực (values không rỗng và tổng > 0)
+      // Chỉ push pending/dirty — KHÔNG push synced (tránh tạo row trùng trong Sheet)
       var toP=allD.filter(function(r){
         if(r.deleted)return false;
+        if(r.sync_status==='synced')return false; // đã sync rồi, bỏ qua
         var vals=r.values||[];
         if(vals.length===0)return false;
         var total=vals.reduce(function(a,b){return a+Number(b);},0);
@@ -1926,20 +1927,23 @@ async function saveAndSync(){
         phong_new:[]
       };
 
-      var pjs=await gsRun('serverPush',JSON.stringify(payload));
-      var res=JSON.parse(pjs);
-      if(res.success){
-        var mapped=res.mapped_ids||{};
-        for(var i=0;i<toP.length;i++){
-          // Re-read từ DB để tránh overwrite he_so đang pending (saveHeSo race)
-          var fresh=await dbGet('dem_le',toP[i].local_id)||toP[i];
-          fresh.sync_status='synced';
-          if(mapped[toP[i].local_id])fresh.sheet_id=mapped[toP[i].local_id];
-          await dbPut('dem_le',fresh);
-        }
-        toast('Đã lưu '+toP.length+' dòng lên Google Sheet ✓');
+      if(toP.length===0&&newV.length===0&&pendA.length===0){
+        toast('✓ Không có dữ liệu mới — đã đồng bộ hết rồi');
       } else {
-        throw new Error(res.error||'Push failed');
+        var pjs=await gsRun('serverPush',JSON.stringify(payload));
+        var res=JSON.parse(pjs);
+        if(res.success){
+          var mapped=res.mapped_ids||{};
+          for(var i=0;i<toP.length;i++){
+            var fresh=await dbGet('dem_le',toP[i].local_id)||toP[i];
+            fresh.sync_status='synced';
+            if(mapped[toP[i].local_id])fresh.sheet_id=mapped[toP[i].local_id];
+            await dbPut('dem_le',fresh);
+          }
+          toast('✓ Đã lưu '+toP.length+' dòng mới lên Google Sheet');
+        } else {
+          throw new Error(res.error||'Push failed');
+        }
       }
     } else {
       // Local mock
@@ -1958,7 +1962,7 @@ async function saveAndSync(){
 // ============================================================
 // SYNC ENGINE — fetch() → GAS API (GitHub Pages) + mock fallback (local preview)
 // ============================================================
-var GAS_API = 'https://script.google.com/macros/s/AKfycbwcLwObNnRgrATN3iOY3-08HtRRpTzmGK-E4qQ8oRFpPxAk8fjuTI3AJD_XGjSUjhdL/exec';
+var GAS_API = 'https://script.google.com/macros/s/AKfycbyEFk4tESM5s8bRfCx7krOVu54OFJqUC9-TUW5VxkDToRs6xL3sI109zqhSIMEp5jFB/exec';
 var IS_GAS = (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1');
 
 // Pull dem_app records from Sheet into IndexedDB (shared between doSync & init refresh)
