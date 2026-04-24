@@ -175,7 +175,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Ro
 <!-- ==================== SCREEN 1: MEASUREMENT CARDS (Bìa) ==================== -->
 <div class="screen active" id="s1">
   <div class="hdr">
-    <span class="ttl">AufmaB Beta <span style="font-size:10px;opacity:0.7">v47</span></span>
+    <span class="ttl">AufmaB Beta <span style="font-size:10px;opacity:0.7">v48</span></span>
     <span id="offlineBadge" style="display:none;font-size:11px;background:#ef5350;color:#fff;border-radius:12px;padding:2px 8px;margin-left:4px">📡 Offline</span>
     <span class="badge" id="syncBadge" style="display:none">0</span>
     <button onclick="exportExcel()" title="Excel Export" style="background:#2e7d32;border:none;color:#fff;font-size:11px;font-weight:700;cursor:pointer;padding:3px 8px;border-radius:4px;flex-shrink:0">&#128202;XL</button>
@@ -2001,10 +2001,17 @@ async function processDemApp(demAppData){
       // don_vi (m/Stk) — đơn vị đo
       var sheetDonVi=row.don_vi||'';
       if(sheetDonVi&&sheetDonVi!==(local.don_vi||'')){local.don_vi=sheetDonVi;changed=true;}
-      // values + he_so + ghi_chu — chỉ update nếu local đã synced (không ghi đè thay đổi đang chờ)
+      // he_so — update ngay cả khi dirty/pending, nếu local vẫn là mặc định (1)
+      // Lý do: record bị push với he_so=1 (bug cũ) thì local=1, nhưng Sheet có thể có =2
+      // Chỉ không ghi đè khi user đã đặt he_so > 1 cục bộ
+      var sheetHeSo=row.he_so||1;
+      if(sheetHeSo!==(local.he_so||1)){
+        if(local.sync_status==='synced'||(local.he_so||1)===1){
+          local.he_so=sheetHeSo;changed=true;
+        }
+      }
+      // values + ghi_chu — chỉ update nếu local đã synced (không ghi đè thay đổi đang chờ)
       if(local.sync_status==='synced'){
-        var sheetHeSo=row.he_so||1;
-        if(sheetHeSo!==(local.he_so||1)){local.he_so=sheetHeSo;changed=true;}
         var sheetTotal=(row.values||[]).reduce(function(a,b){return a+b;},0);
         var localTotal=(local.values||[]).reduce(function(a,b){return a+Number(b);},0);
         if(Math.abs(sheetTotal-localTotal)>0.001){local.values=row.values;changed=true;}
