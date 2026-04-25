@@ -1,0 +1,1799 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sơ Đồ Kiến Trúc — AufmaB Beta</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  .header { background: #1e293b; border-bottom: 1px solid #334155; padding: 12px 20px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+  .header h1 { font-size: 18px; font-weight: 700; color: #f8fafc; }
+  .header h1 span { color: #38bdf8; }
+  .header .subtitle { font-size: 12px; color: #64748b; }
+
+  .tabs { display: flex; gap: 4px; background: #0f172a; padding: 8px 20px 0; border-bottom: 1px solid #1e293b; flex-shrink: 0; }
+  .tab-btn { padding: 8px 20px; border: 1px solid #334155; border-bottom: none; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; background: #1e293b; color: #64748b; }
+  .tab-btn.active { background: #1e293b; color: #38bdf8; margin-bottom: -1px; border-bottom: 1px solid #1e293b; }
+  .tab-btn:hover:not(.active) { background: #263348; color: #94a3b8; }
+
+  .main { display: flex; flex: 1; overflow: hidden; }
+  .main.hidden { display: none; }
+
+  .graph-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+  .toolbar { display: flex; gap: 8px; padding: 10px 16px; background: #1e293b; border-bottom: 1px solid #334155; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
+  .toolbar-btn { padding: 6px 14px; border: 1px solid #334155; border-radius: 6px; background: #0f172a; color: #94a3b8; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.2s; }
+  .toolbar-btn:hover { background: #1e293b; color: #e2e8f0; border-color: #475569; }
+  .toolbar-sep { width: 1px; height: 24px; background: #334155; margin: 0 4px; }
+
+  .legend { display: flex; gap: 12px; margin-left: auto; flex-wrap: wrap; align-items: center; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #94a3b8; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+  #cy { flex: 1; background: #0f172a; }
+
+  .detail-panel { width: 320px; background: #1e293b; border-left: 1px solid #334155; display: flex; flex-direction: column; overflow: hidden; transition: width 0.3s ease; flex-shrink: 0; }
+  .detail-panel.collapsed { width: 0; }
+
+  .panel-header { padding: 14px 16px; background: #263348; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+  .panel-header h3 { font-size: 14px; font-weight: 700; color: #f8fafc; }
+  .panel-close { background: none; border: none; color: #64748b; cursor: pointer; font-size: 18px; line-height: 1; padding: 2px 6px; border-radius: 4px; }
+  .panel-close:hover { background: #334155; color: #e2e8f0; }
+
+  .panel-body { flex: 1; overflow-y: auto; padding: 16px; scrollbar-width: thin; scrollbar-color: #334155 transparent; }
+
+  .panel-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #475569; text-align: center; gap: 8px; padding: 20px; }
+  .panel-empty .icon { font-size: 40px; }
+  .panel-empty p { font-size: 13px; line-height: 1.5; }
+
+  .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; margin-bottom: 12px; }
+  .status-done { background: #064e3b; color: #34d399; }
+  .status-todo { background: #431407; color: #fb923c; }
+
+  .panel-desc { font-size: 13px; line-height: 1.6; color: #94a3b8; margin-bottom: 16px; padding: 10px; background: #0f172a; border-radius: 8px; border-left: 3px solid #334155; }
+  .panel-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #475569; margin-bottom: 8px; margin-top: 14px; }
+
+  .file-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
+  .file-item { font-size: 11px; font-family: 'Consolas', monospace; color: #38bdf8; background: #0f172a; padding: 5px 8px; border-radius: 5px; border: 1px solid #1e3a5f; word-break: break-all; }
+
+  .fn-list { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 4px; }
+  .fn-item { font-size: 11px; font-family: 'Consolas', monospace; color: #a78bfa; background: #1e1b4b; padding: 3px 8px; border-radius: 4px; border: 1px solid #312e81; }
+
+  .copy-btn { width: 100%; padding: 10px; margin-top: 16px; background: #0369a1; border: none; border-radius: 8px; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .copy-btn:hover { background: #0284c7; }
+  .copy-btn.copied { background: #065f46; }
+
+  #edge-tooltip { position: fixed; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px 14px; max-width: 300px; font-size: 12px; line-height: 1.6; color: #e2e8f0; pointer-events: none; z-index: 9999; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+  #edge-tooltip .tt-label { font-weight: 700; color: #38bdf8; margin-bottom: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  #edge-tooltip .tt-body { color: #94a3b8; }
+
+  #tab-mermaid { flex: 1; overflow-y: auto; padding: 24px; display: none; gap: 32px; flex-direction: column; scrollbar-width: thin; scrollbar-color: #334155 transparent; }
+  #tab-mermaid.active { display: flex; }
+
+  .mermaid-block { background: #1e293b; border: 1px solid #334155; border-radius: 12px; overflow: hidden; }
+  .mermaid-block-header { padding: 14px 20px; background: #263348; border-bottom: 1px solid #334155; }
+  .mermaid-block-header h3 { font-size: 15px; font-weight: 700; color: #f8fafc; margin-bottom: 2px; }
+  .mermaid-block-header p { font-size: 12px; color: #64748b; }
+  .mermaid-block-body { padding: 24px; overflow-x: auto; background: #0f172a; display: flex; justify-content: center; }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+  .chat-section { margin-top: 20px; border-top: 1px solid #334155; padding-top: 16px; }
+  .chat-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #475569; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .chat-messages { background: #0f172a; border-radius: 8px; border: 1px solid #1e293b; min-height: 120px; max-height: 220px; overflow-y: auto; padding: 10px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .chat-msg { font-size: 12px; line-height: 1.6; padding: 8px 10px; border-radius: 6px; max-width: 95%; }
+  .chat-msg.user { background: #1e3a5f; color: #bae6fd; align-self: flex-end; border-bottom-right-radius: 2px; }
+  .chat-msg.ai { background: #1e293b; color: #94a3b8; align-self: flex-start; border-bottom-left-radius: 2px; border: 1px solid #334155; }
+  .chat-msg.thinking { color: #475569; font-style: italic; }
+  .chat-input-row { display: flex; gap: 6px; }
+  .chat-input { flex: 1; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 8px 10px; color: #e2e8f0; font-size: 12px; outline: none; resize: none; height: 60px; font-family: inherit; }
+  .chat-input:focus { border-color: #0ea5e9; }
+  .chat-send { padding: 0 14px; background: #0369a1; border: none; border-radius: 6px; color: #fff; font-size: 13px; cursor: pointer; font-weight: 600; transition: background 0.2s; align-self: flex-end; height: 36px; }
+  .chat-send:hover { background: #0284c7; }
+  .chat-send:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+  .sf-filter-btn[data-sf="index.html"].active { background: #0c4a6e !important; color: #38bdf8 !important; border-color: #38bdf8 !important; }
+  .sf-filter-btn[data-sf="Code.gs"].active    { background: #422006 !important; color: #eab308 !important; border-color: #eab308 !important; }
+  .sf-filter-btn[data-sf="Google"].active     { background: #1e293b !important; color: #94a3b8 !important; border-color: #94a3b8 !important; }
+
+  /* ── Files Panel (left sidebar — accordion) ── */
+  .files-panel { width: 280px; background: #1e293b; border-right: 1px solid #334155; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; }
+  .files-panel-header { padding: 11px 14px 9px; border-bottom: 1px solid #334155; flex-shrink: 0; }
+  .files-panel-header h4 { font-size: 12px; font-weight: 700; color: #f8fafc; margin-bottom: 2px; }
+  .files-panel-header p  { font-size: 10px; color: #64748b; }
+  .files-panel-body { overflow-y: auto; flex: 1; scrollbar-width: thin; scrollbar-color: #334155 transparent; }
+
+  /* accordion item */
+  .fp-item { border-bottom: 1px solid #1e293b; }
+
+  /* header row — always visible */
+  .fp-header { display: flex; align-items: center; gap: 0; border-left: 3px solid transparent; transition: background 0.15s, border-left-color 0.2s; }
+  .fp-header.fp-h-active { border-left-color: var(--fpc, #64748b); background: #0c1929; }
+  .fp-h-left { flex: 1; padding: 10px 10px 10px 11px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; min-width: 0; }
+  .fp-h-left.fp-clickable { cursor: pointer; }
+  .fp-h-left.fp-clickable:hover { background: #263348; }
+  .fp-h-name { font-size: 11.5px; font-weight: 700; font-family: 'Consolas', monospace; white-space: nowrap; }
+  .fp-h-lines { font-size: 9px; color: #64748b; background: #0f172a; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
+  .fp-h-tag { font-size: 9px; color: #475569; background: #0f172a; padding: 1px 5px; border-radius: 3px; border: 1px solid #334155; }
+  .fp-h-count { font-size: 9px; font-weight: 700; padding: 1px 7px; border-radius: 10px; white-space: nowrap; }
+
+  /* expand/collapse arrow button */
+  .fp-arrow { flex-shrink: 0; width: 30px; height: 100%; min-height: 38px; background: none; border: none; border-left: 1px solid #1e293b; color: #475569; cursor: pointer; font-size: 9px; display: flex; align-items: center; justify-content: center; transition: color 0.2s, background 0.15s; }
+  .fp-arrow:hover { background: #263348; color: #94a3b8; }
+  .fp-arrow .fp-chevron { display: inline-block; transition: transform 0.25s; }
+  .fp-arrow.open .fp-chevron { transform: rotate(180deg); }
+  .fp-arrow.open { color: var(--fpc, #64748b); border-left-color: #334155; }
+
+  /* body — hidden by default */
+  .fp-body { display: none; padding: 0 13px 11px 14px; border-left: 3px solid var(--fpc, transparent); background: #0f172a33; }
+  .fp-body.open { display: block; }
+
+  .fp-card-role { font-size: 10.5px; color: #94a3b8; line-height: 1.55; margin-bottom: 8px; padding-top: 9px; border-top: 1px solid #1e293b; }
+  .fp-section-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #475569; margin-bottom: 5px; }
+  .fp-chips { display: flex; flex-wrap: wrap; gap: 3px; }
+  .fp-chip { font-size: 9.5px; padding: 2px 6px; border-radius: 4px; border: 1px solid; white-space: nowrap; }
+  .fp-no-nodes { font-size: 10px; color: #475569; font-style: italic; padding: 3px 8px; border-radius: 4px; background: #0f172a; display: inline-block; border: 1px dashed #334155; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>AufmaB Beta — <span>Kiến Trúc Hệ Thống</span></h1>
+    <div class="subtitle">HTML + GAS WebApp · IndexedDB Offline · Google Sheets + Drive · iPad công trường</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" id="tab-btn-graph" onclick="switchTab('graph')">📊 Cytoscape Graph</button>
+  <button class="tab-btn" id="tab-btn-dataflow" onclick="switchTab('dataflow')">🌊 Dataflow</button>
+  <button class="tab-btn" id="tab-btn-overview" onclick="switchTab('overview')">🗺️ Code Overview</button>
+  <button class="tab-btn" id="tab-btn-mermaid" onclick="switchTab('mermaid')">🔀 Mermaid Flow Diagrams</button>
+</div>
+
+<!-- TAB 1: Cytoscape -->
+<div id="tab-graph" class="main">
+
+  <!-- ── Left: Source Files Panel ── -->
+  <div class="files-panel" id="files-panel">
+    <div class="files-panel-header">
+      <h4>📂 Source Files — <span id="fp-count" style="color:#38bdf8">4 files</span></h4>
+      <p>Click file để lọc sơ đồ · Xem hàm theo file</p>
+    </div>
+    <div class="files-panel-body" id="files-panel-body">
+      <!-- Rendered by renderFilesPanel() -->
+    </div>
+  </div>
+
+  <div class="graph-area">
+    <div class="toolbar">
+      <button class="toolbar-btn" onclick="cy.zoom(cy.zoom()*1.2)">🔍 Zoom In</button>
+      <button class="toolbar-btn" onclick="cy.zoom(cy.zoom()*0.8)">🔎 Zoom Out</button>
+      <button class="toolbar-btn" onclick="cy.fit(undefined, 40)">⊡ Fit All</button>
+      <button class="toolbar-btn" onclick="resetLayout()">↺ Reset Layout</button>
+      <div class="toolbar-sep"></div>
+      <span style="font-size:11px;color:#64748b;white-space:nowrap">Mũi tên:</span>
+      <button class="toolbar-btn" onclick="changeEdgeFontSize(1)">A↑</button>
+      <button class="toolbar-btn" onclick="changeEdgeFontSize(-1)">A↓</button>
+      <div class="toolbar-sep"></div>
+      <span style="font-size:11px;color:#64748b;white-space:nowrap">Block:</span>
+      <button class="toolbar-btn" onclick="changeNodeFontSize(1)">B↑</button>
+      <button class="toolbar-btn" onclick="changeNodeFontSize(-1)">B↓</button>
+      <div class="toolbar-sep"></div>
+      <button class="toolbar-btn" id="lang-btn" onclick="toggleLang()" style="font-weight:700;letter-spacing:0.05em">🌐 EN</button>
+      <div class="toolbar-sep"></div>
+      <span id="multiselect-hint" style="font-size:11px;color:#64748b;white-space:nowrap;display:none"><span id="multiselect-count" style="color:#38bdf8;font-weight:700">0</span> blocks đã chọn · <button onclick="askMultiSelect()" style="background:#0369a1;border:none;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:5px;cursor:pointer">🤖 Hỏi Gemini</button> · <button onclick="clearMultiSelect()" style="background:none;border:1px solid #334155;color:#94a3b8;font-size:11px;padding:3px 8px;border-radius:5px;cursor:pointer">✕ Bỏ chọn</button></span>
+      <span id="multiselect-tip" style="font-size:11px;color:#475569;white-space:nowrap">Ctrl+click hoặc Ctrl+kéo để chọn nhiều block</span>
+      <div class="toolbar-sep"></div>
+      <span style="font-size:11px;color:#64748b;white-space:nowrap">📂 File:</span>
+      <button class="toolbar-btn sf-filter-btn" data-sf="index.html" onclick="filterBySF('index.html')" title="Chỉ hiện nodes từ index.html (Frontend)" style="border-left:3px solid #38bdf8">📄 html</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="Code.gs" onclick="filterBySF('Code.gs')" title="Chỉ hiện nodes từ Code.gs (GAS Backend)" style="border-left:3px solid #eab308">⚡ .gs</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="Google" onclick="filterBySF('Google')" title="Chỉ hiện Google Services (external)" style="border-left:3px solid #6b7280">☁️ Google</button>
+      <div class="toolbar-sep"></div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#0ea5e9"></div>UI Screen</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div>Bottom Sheet</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Logic / Render</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div>Data / IndexedDB</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#eab308"></div>GAS Backend</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ec4899"></div>Output</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#6b7280"></div>Google Storage</div>
+      </div>
+    </div>
+    <div id="cy"></div>
+  </div>
+
+  <div class="detail-panel collapsed" id="detail-panel">
+    <div class="panel-header">
+      <h3 id="panel-title">Module Detail</h3>
+      <button class="panel-close" onclick="closePanel()">✕</button>
+    </div>
+    <div class="panel-body" id="panel-body">
+      <div class="panel-empty">
+        <div class="icon">👆</div>
+        <p>Click vào một node trong đồ thị để xem chi tiết module</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: Dataflow -->
+<div id="tab-dataflow" class="main hidden">
+  <div style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+    <div class="toolbar">
+      <button class="toolbar-btn" onclick="cyDf&&cyDf.zoom(cyDf.zoom()*1.2)">🔍 Zoom In</button>
+      <button class="toolbar-btn" onclick="cyDf&&cyDf.zoom(cyDf.zoom()*0.8)">🔎 Zoom Out</button>
+      <button class="toolbar-btn" onclick="cyDf&&cyDf.fit(undefined,40)">⊡ Fit All</button>
+      <button class="toolbar-btn" onclick="resetDfLayout()">↺ Reset Layout</button>
+      <div class="toolbar-sep"></div>
+      <span style="font-size:11px;color:#64748b">Mũi tên:</span>
+      <button class="toolbar-btn" onclick="changeDfEdgeFont(1)">A↑</button>
+      <button class="toolbar-btn" onclick="changeDfEdgeFont(-1)">A↓</button>
+      <div class="toolbar-sep"></div>
+      <span style="font-size:11px;color:#64748b">Block:</span>
+      <button class="toolbar-btn" onclick="changeDfNodeFont(1)">B↑</button>
+      <button class="toolbar-btn" onclick="changeDfNodeFont(-1)">B↓</button>
+      <div class="toolbar-sep"></div>
+      <span style="font-size:11px;color:#f97316;font-weight:700">🌊 Chiều mũi tên = chiều DATA chảy</span>
+      <div class="toolbar-sep"></div>
+      <span style="font-size:11px;color:#64748b;white-space:nowrap">📂 File:</span>
+      <button class="toolbar-btn sf-filter-btn" data-sf="index.html" onclick="filterDfBySF('index.html')" title="Chỉ hiện nodes từ index.html (Frontend)" style="border-left:3px solid #38bdf8">📄 html</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="Code.gs" onclick="filterDfBySF('Code.gs')" title="Chỉ hiện nodes từ Code.gs (GAS Backend)" style="border-left:3px solid #eab308">⚡ .gs</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="Google" onclick="filterDfBySF('Google')" title="Chỉ hiện Google Services (external)" style="border-left:3px solid #6b7280">☁️ Google</button>
+      <div class="toolbar-sep"></div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#0ea5e9"></div>UI Screen</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div>Bottom Sheet</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Logic / Render</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div>Data / IndexedDB</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#eab308"></div>GAS Backend</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ec4899"></div>Output</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#6b7280"></div>Google Storage</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f43f5e;border-radius:50%"></div>Kết nối bị thiếu (mới)</div>
+      </div>
+    </div>
+    <div id="cy-df" style="flex:1;background:#0f172a;"></div>
+  </div>
+  <div class="detail-panel collapsed" id="df-detail-panel">
+    <div class="panel-header">
+      <h3 id="df-panel-title">Module Detail</h3>
+      <button class="panel-close" onclick="document.getElementById('df-detail-panel').classList.add('collapsed')">✕</button>
+    </div>
+    <div class="panel-body" id="df-panel-body">
+      <div class="panel-empty"><div class="icon">👆</div><p>Click node để xem chi tiết</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- Multi-select chat overlay -->
+<div id="multiselect-panel" style="display:none;position:fixed;bottom:20px;right:20px;width:360px;background:#1e293b;border:1px solid #334155;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:1000;flex-direction:column;overflow:hidden;">
+  <div style="padding:12px 16px;background:#263348;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center;">
+    <span id="ms-panel-title" style="font-size:13px;font-weight:700;color:#f8fafc">🤖 Hỏi về các blocks đã chọn</span>
+    <button onclick="document.getElementById('multiselect-panel').style.display='none'" style="background:none;border:none;color:#64748b;font-size:16px;cursor:pointer;padding:2px 6px;">✕</button>
+  </div>
+  <div id="ms-selected-chips" style="padding:10px 14px;display:flex;flex-wrap:wrap;gap:5px;border-bottom:1px solid #1e293b;max-height:80px;overflow-y:auto;"></div>
+  <div id="ms-messages" style="padding:10px;max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
+  <div style="padding:10px;border-top:1px solid #334155;display:flex;gap:6px;">
+    <textarea id="ms-input" style="flex:1;background:#0f172a;border:1px solid #334155;border-radius:6px;padding:8px;color:#e2e8f0;font-size:12px;resize:none;height:54px;font-family:inherit;outline:none" placeholder="Hỏi về mối liên hệ giữa các blocks..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMultiChat();}"></textarea>
+    <button onclick="sendMultiChat()" style="padding:0 14px;background:#0369a1;border:none;border-radius:6px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;align-self:flex-end;height:36px;">Gửi</button>
+  </div>
+</div>
+
+<!-- TAB 2: Code Overview -->
+<div id="tab-overview" class="main hidden">
+  <div style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+    <div class="toolbar">
+      <button class="toolbar-btn" onclick="cyOverview&&cyOverview.zoom(cyOverview.zoom()*1.2)">🔍 Zoom In</button>
+      <button class="toolbar-btn" onclick="cyOverview&&cyOverview.zoom(cyOverview.zoom()*0.8)">🔎 Zoom Out</button>
+      <button class="toolbar-btn" onclick="cyOverview&&cyOverview.fit(undefined,60)">⊡ Fit All</button>
+      <div class="toolbar-sep"></div>
+      <span style="font-size:11px;color:#64748b;white-space:nowrap">📂 File:</span>
+      <button class="toolbar-btn sf-filter-btn" data-sf="index.html" onclick="filterOvBySF('index.html')" title="Chỉ hiện nodes từ index.html (Frontend)" style="border-left:3px solid #38bdf8">📄 html</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="Code.gs" onclick="filterOvBySF('Code.gs')" title="Chỉ hiện nodes từ Code.gs (GAS Backend)" style="border-left:3px solid #eab308">⚡ .gs</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="Google" onclick="filterOvBySF('Google')" title="Chỉ hiện Google Services (external)" style="border-left:3px solid #6b7280">☁️ Google</button>
+      <div class="toolbar-sep"></div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#0ea5e9"></div>UI Screen</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div>Forms & Menus</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Logic / Render</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div>Data / IndexedDB</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ec4899"></div>Output</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#eab308"></div>GAS Backend</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#6b7280"></div>Google Storage</div>
+        <span style="font-size:11px;color:#475569;margin-left:8px">· Click node để xem chi tiết · Hover edge để xem luồng</span>
+      </div>
+    </div>
+    <div id="cy-overview" style="flex:1;background:#0f172a;"></div>
+  </div>
+  <div class="detail-panel collapsed" id="overview-detail-panel">
+    <div class="panel-header">
+      <h3 id="overview-panel-title">Module Detail</h3>
+      <button class="panel-close" onclick="document.getElementById('overview-detail-panel').classList.add('collapsed')">✕</button>
+    </div>
+    <div class="panel-body" id="overview-panel-body">
+      <div class="panel-empty">
+        <div class="icon">👆</div>
+        <p>Click vào một node để xem mô tả chi tiết</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 3: Mermaid -->
+<div id="tab-mermaid">
+  <div class="mermaid-block">
+    <div class="mermaid-block-header">
+      <h3>💾 Luồng 1: Save & Sync — bấm Save → GAS → Google Sheets</h3>
+      <p>Từ bấm nút Save trên S2 → gom data từ IndexedDB → đẩy lên GAS WebApp → ghi vào bsGew sheet</p>
+    </div>
+    <div class="mermaid-block-body">
+      <pre class="mermaid">
+sequenceDiagram
+    actor User as Kỹ thuật viên (iPad)
+    participant S2 as Screen 2 (Phòng Detail)
+    participant IDB as IndexedDB (Local)
+    participant GAS as GAS WebApp
+    participant Sheets as Google Sheets
+    participant Drive as Google Drive
+
+    User->>S2: Bấm nút 💾 Save
+    S2->>IDB: dbGetAll('dem_le') — lấy tất cả records
+    IDB-->>S2: [{local_id, values[], nhom, grosse, ...}]
+    S2->>S2: Lọc: pending + values > 0
+    S2->>GAS: gsRun('serverPush', JSON.stringify({dem_le, phong_new, vat_lieu_new, anh_urls}))
+    GAS->>Sheets: writeDemLe() — ghi từng row vào bsGew sheet
+    Sheets-->>GAS: {success, mapped_ids}
+    GAS->>GAS: Gán sheet_id cho từng record
+    GAS-->>S2: {success: true, mapped_ids}
+    S2->>IDB: Cập nhật sync_status = 'synced' + sheet_id cho mỗi record
+    S2-->>User: Toast "Sync OK!"
+
+    Note over S2,IDB: Ảnh pending
+    S2->>IDB: dbGetAll('anh') — lọc pending có data
+    S2->>GAS: gsRun('serverUploadImage', base64)
+    GAS->>Drive: getOrCreateSubfolder() → saveFile()
+    Drive-->>GAS: drive_url
+    GAS-->>S2: {success, drive_url, filename}
+    S2->>IDB: Cập nhật sync_status = 'synced' + drive_url
+      </pre>
+    </div>
+  </div>
+
+  <div class="mermaid-block">
+    <div class="mermaid-block-header">
+      <h3>📋 Luồng 2: Mở Card → Nhập liệu → Tap +1/+5</h3>
+      <p>Click card S1 → renderS2() build giao diện → user tap số liệu → lưu IndexedDB ngay lập tức</p>
+    </div>
+    <div class="mermaid-block-body">
+      <pre class="mermaid">
+sequenceDiagram
+    actor User as Kỹ thuật viên
+    participant S1 as Screen 1 (Card List)
+    participant S2 as Screen 2 (Phòng Detail)
+    participant IDB as IndexedDB
+    participant MR as buildMR() — Material Row
+
+    User->>S1: Click vào card (phòng + Gewerk)
+    S1->>S1: openCard(card) — set curPhong
+    S1->>S2: showScreen('s2')
+    S2->>IDB: dbGetAll('dem_le') — lọc theo ma_phong + nhom
+    IDB-->>S2: [records grouped by nhom → grosse]
+    S2->>S2: renderS2() — build DOM theo Gewerk / DN / material rows
+    S2->>MR: buildMR(rec) — từng cấu kiện
+    MR-->>S2: DOM row với +5, +1, ô công thức, he_so
+
+    User->>S2: Tap nút +1 hoặc +5
+    S2->>IDB: dbGet('dem_le', local_id)
+    IDB-->>S2: record hiện tại
+    S2->>S2: pVal() — push giá trị vào values[]
+    S2->>IDB: dbPut('dem_le', {...record, values:[...+val], sync_status:'pending'})
+    IDB-->>S2: OK
+    S2->>S2: Cập nhật DOM: hiện tổng mới trong ô mr-box
+    Note over S2: Không re-render toàn bộ — chỉ update DOM element tại chỗ
+    S2-->>User: Vibrate 30ms (haptic feedback trên mobile)
+      </pre>
+    </div>
+  </div>
+
+  <div class="mermaid-block">
+    <div class="mermaid-block-header">
+      <h3>➕ Luồng 3: Thêm cấu kiện mới → Local + GAS + CONG_VIEC Sheet</h3>
+      <p>Từ menu ··· → thêm cấu kiện mới → tạo IndexedDB records cho tất cả DNs + ghi vào CONG_VIEC</p>
+    </div>
+    <div class="mermaid-block-body">
+      <pre class="mermaid">
+sequenceDiagram
+    actor User as Kỹ thuật viên
+    participant CTX as Context Menu (···)
+    participant BSM as Bottom Sheet bsNewMat
+    participant IDB as IndexedDB
+    participant GAS as GAS WebApp
+    participant CW as CONG_VIEC Sheet
+
+    User->>CTX: Tap ··· trên Gewerk header
+    CTX-->>User: Menu: Xóa / Thêm DN mới / Thêm cấu kiện mới / Nhân bản
+    User->>CTX: Tap "Thêm cấu kiện mới"
+    CTX->>BSM: openNewMatSheet(gew) — hiện form nhập tên + đơn vị
+    User->>BSM: Nhập tên cấu kiện (VD: "Flansch DN200")
+    User->>BSM: Chọn đơn vị: Stk / m / m²
+    User->>BSM: Tap "Thêm"
+
+    BSM->>IDB: dbGetAll('dem_le') — lọc các DN của Gewerk này
+    IDB-->>BSM: [distinct grosse values]
+    loop Mỗi DN đang có
+        BSM->>IDB: dbPut('dem_le', {local_id: uuid(), nhom: gew, grosse: dn, ten_vl_german: name, values:[], don_vi, kieu_tinh, sync_status:'pending'})
+    end
+
+    BSM->>GAS: gsRun('serverAddMaterial', {nhom, ten_vl_german, don_vi, kieu_tinh})
+    GAS->>CW: Tìm hàng cuối cùng của cùng Gewerk (nhom)
+    GAS->>CW: insertRowAfter() — ghi row mới (ID, STT, nhom, ten_vl_german, don_vi, kieu_tinh)
+    CW-->>GAS: OK
+    GAS-->>BSM: {success: true}
+
+    BSM->>BSM: closeSheet + renderS2()
+    BSM-->>User: Cấu kiện mới xuất hiện trong tất cả DN
+      </pre>
+    </div>
+  </div>
+</div>
+
+<!-- Edge tooltip -->
+<div id="edge-tooltip">
+  <div class="tt-label" id="tt-label"></div>
+  <div class="tt-body" id="tt-body"></div>
+</div>
+
+<script>
+// ── Node details ──────────────────────────────────────────────────
+const nodeDetails = {
+  's1': {
+    title: '🏠 Screen 1 — Bìa List', status: 'done',
+    files: ['index.html (line 142–150, 418–480)'],
+    functions: ['renderS1()', 'openCard(card)', 'goS1()'],
+    description: 'Màn hình chính. Hiển thị tất cả Measurement Cards nhóm theo thời gian tạo. Mỗi card = 1 phòng + 1 Gewerk. Hiện tổng số liệu thực tế (VD: "7.2m Stahl Rohr · 5 Bogen 90°"). Nút FAB (+) tạo bìa mới.',
+    prompt: 'Em hãy đọc index.html từ dòng 418 đến 480 (renderS1, openCard). Tôi muốn sửa/thêm tính năng:'
+  },
+  's2': {
+    title: '📋 Screen 2 — Phòng Detail', status: 'done',
+    files: ['index.html (line 152–167, 598–745)'],
+    functions: ['renderS2()', 'saveAndSync()', 'capturePhoto()', 'goS1()'],
+    description: 'Màn hình nhập liệu chính. Hiển thị tất cả Gewerk của phòng, nhóm theo DN, với từng cấu kiện. Nút +5/+1 để nhập nhanh. Nút Save để sync. Bottom bar: + Gewerk/DN và 📷 Foto.',
+    prompt: 'Em hãy đọc index.html từ dòng 598 đến 745 (renderS2). Tôi muốn sửa/thêm tính năng:'
+  },
+  's3': {
+    title: '🔍 Screen 3 — Material Selector', status: 'done',
+    files: ['index.html (line 1079–1237)'],
+    functions: ['goToS3()', 'renderS3()', 'toggleS3Mat()', 'confirmMaterials()', 'toggleAllS3()'],
+    description: 'Màn hình chọn cấu kiện trước khi tạo DN mới. Hiện danh sách tất cả cấu kiện của Gewerk (từ IndexedDB vat_lieu). Checkbox chọn/bỏ từng cấu kiện. Halterung section riêng bên dưới.',
+    prompt: 'Em hãy đọc index.html từ dòng 1079 đến 1237 (S3 Material Selector). Tôi muốn sửa/thêm tính năng:'
+  },
+  'bs-newcard': {
+    title: '➕ Bottom Sheet — Tạo Bìa Mới', status: 'done',
+    files: ['index.html (line 169–260, 558–590)'],
+    functions: ['createCard()', 'smartSearch()', 'initGewerkChips()', 'addPhong()'],
+    description: 'Form tạo Measurement Card mới. Nhập Raum-Nr, Name, Etage — smart search autocomplete từ danh sách phòng. Multi-select Gewerk chips (Lüftung, Heizung, Kälte...). Mỗi Gewerk được tạo thành 1 card riêng.',
+    prompt: 'Em hãy đọc index.html từ dòng 169 đến 260 và hàm createCard(). Tôi muốn sửa/thêm tính năng:'
+  },
+  'bs-gew': {
+    title: '⚙️ Bottom Sheet — Thêm Gewerk/DN', status: 'done',
+    files: ['index.html (line 1023–1078)'],
+    functions: ['openBsGew(gew, locked)', 'updateDNPresets()', 'goToS3()'],
+    description: 'Bottom sheet để thêm DN mới vào Gewerk đang có. Chọn DN size từ presets (DN50, DN80, DN100...) hoặc nhập tự do. Khi Gewerk đã chọn (locked=true) hiện chip cố định. Bấm tiếp → S3.',
+    prompt: 'Em hãy đọc index.html hàm openBsGew() và updateDNPresets(). Tôi muốn sửa/thêm tính năng:'
+  },
+  'bs-newmat': {
+    title: '🆕 Bottom Sheet — Thêm Cấu Kiện Mới', status: 'done',
+    files: ['index.html (line 950–1022)'],
+    functions: ['openNewMatSheet(gew)', 'addNewMaterial()', 'updateNmInfo()'],
+    description: 'Form thêm cấu kiện mới vào Gewerk từ context menu ···. Nhập tên tiếng Đức + chọn đơn vị (Stk/m/m²). Khi confirm: tạo IndexedDB records cho TẤT CẢ DN đang có của Gewerk đó + gọi serverAddMaterial() để ghi vào CONG_VIEC sheet.',
+    prompt: 'Em hãy đọc index.html hàm openNewMatSheet() và addNewMaterial(). Tôi muốn sửa/thêm tính năng:'
+  },
+  'ctx-menu': {
+    title: '☰ Context Menu ···', status: 'done',
+    files: ['index.html (line 88–94, 911–949)'],
+    functions: ['showGewCtx(gew, btnEl)', 'gewDeleteMode{}'],
+    description: 'Context menu hiện khi bấm ··· trên Gewerk header. 4 actions: (1) Xóa cấu kiện — toggle delete mode hiện × đỏ từng row; (2) Thêm DN mới; (3) Thêm cấu kiện mới; (4) Nhân bản. Thay thế nút × nguy hiểm trước đây.',
+    prompt: 'Em hãy đọc index.html hàm showGewCtx() và CSS #gewCtx. Tôi muốn sửa/thêm tính năng:'
+  },
+  'indexeddb': {
+    title: '🗄️ IndexedDB — AufmaBV3', status: 'done',
+    files: ['index.html (line 371–390)'],
+    functions: ['openDB()', 'dbPut()', 'dbGet()', 'dbGetAll()', 'dbIdx()'],
+    description: 'Local database chạy trên browser. 4 stores: phong (danh sách phòng), vat_lieu (master cấu kiện), dem_le (dữ liệu đo đạc — keyPath: local_id), anh (ảnh base64). Offline-first: mọi thao tác lưu vào đây trước khi sync.',
+    prompt: 'Em hãy đọc index.html hàm openDB() và các dbPut/dbGet/dbGetAll. Tôi muốn sửa schema hoặc thêm store mới:'
+  },
+  'render-s1': {
+    title: '🔧 renderS1() — Build Card List', status: 'done',
+    files: ['index.html (line 418–480)'],
+    functions: ['renderS1()', 'updateBadge()'],
+    description: 'Đọc toàn bộ dem_le từ IndexedDB → group by card_id → tính tổng values thực tế theo tên cấu kiện → render mỗi card với tên phòng, Gewerk badge, DN list, material summary. Sort by created_at DESC.',
+    prompt: 'Em hãy đọc hàm renderS1() trong index.html. Tôi muốn thay đổi cách hiển thị card:'
+  },
+  'render-s2': {
+    title: '🔧 renderS2() — Build Detail View', status: 'done',
+    files: ['index.html (line 598–745)'],
+    functions: ['renderS2()', 'buildMR(rec)', 'openBsGew()', 'showGewCtx()'],
+    description: 'Đọc dem_le lọc theo ma_phong + nhom từ IndexedDB → group by nhom (Gewerk) → group by grosse (DN) → render từng material row qua buildMR(). Giữ trạng thái collapse/open của từng Gewerk và DN.',
+    prompt: 'Em hãy đọc hàm renderS2() trong index.html. Tôi muốn thay đổi cách hiển thị detail:'
+  },
+  'build-mr': {
+    title: '🔧 buildMR() — Material Row', status: 'done',
+    files: ['index.html (line 746–853)'],
+    functions: ['buildMR(rec)', 'tapVal()', 'pVal()', 'saveHeSo()', 'editTk()', 'addSeg()'],
+    description: '⭐ God Node của frontend! Build từng dòng cấu kiện: label tên, ô hiển thị tổng (mr-box), nút +5/+1/hệ số, ô công thức custom, nút × xóa. Inline event handlers cho real-time update không re-render.',
+    prompt: 'Em hãy đọc hàm buildMR() trong index.html. Tôi muốn sửa giao diện/logic của material row:'
+  },
+  'sync': {
+    title: '🔄 Sync Engine — saveAndSync()', status: 'done',
+    files: ['index.html (line 1251–1410)'],
+    functions: ['saveAndSync()', 'doSync()', 'gsRun()', 'updateBadge()'],
+    description: 'saveAndSync(): đọc pending records → push lên GAS → upload ảnh. doSync(): pull phong + vat_lieu từ GAS khi first run. gsRun(): wrapper cho google.script.run (IS_GAS) với fallback mock khi test local.',
+    prompt: 'Em hãy đọc hàm saveAndSync() và doSync() trong index.html. Tôi muốn sửa logic sync:'
+  },
+  'excel': {
+    title: '📊 Excel Export — exportExcel()', status: 'done',
+    files: ['index.html (line 1419–1530)'],
+    functions: ['exportExcel()', 'buildXLSXBytes()', 'buildZip()'],
+    description: 'Inline XLSX writer (không dùng CDN, hoạt động offline). Đọc tất cả dem_le từ IndexedDB → bỏ records có total=0 → sort by tang→phong→nhom→DN → xuất file AufmaB_YYYYMMDD.xlsx. Columns: Etage, Raum-Nr, Raumname, Gewerk, DN/Gruppe, Cấu kiện, Einheit, Gesamt.',
+    prompt: 'Em hãy đọc hàm exportExcel() và buildXLSXBytes() trong index.html. Tôi muốn cải thiện Excel export:'
+  },
+  'photo': {
+    title: '📷 Photo Capture', status: 'done',
+    files: ['index.html (line 1238–1250)'],
+    functions: ['capturePhoto(event)'],
+    description: 'Chụp ảnh qua camera input (capture=environment). Đọc file → FileReader base64 → lưu vào IndexedDB store "anh" với sync_status=pending. Filename hiện tại: ma_phong_timestamp.jpg (cần cải thiện format).',
+    prompt: 'Em hãy đọc hàm capturePhoto() trong index.html. Tôi muốn cải thiện đặt tên ảnh theo format: YYYYMMDD_Tang_Phong_001.jpg'
+  },
+  'gas-entry': {
+    title: '⚡ GAS — doGet() Entry Point', status: 'done',
+    files: ['Code.gs (line 16–24)'],
+    functions: ['doGet(e)', 'IS_GAS flag'],
+    description: 'Entry point của GAS WebApp. doGet() trả về index.html. IS_GAS = typeof google !== undefined — dùng để phân biệt chạy trên GAS thật hay local preview. Deploy ID cố định để tái deploy không tạo mới.',
+    prompt: 'Em hãy đọc Code.gs từ dòng 1 đến 30. Tôi muốn sửa cấu hình GAS:'
+  },
+  'server-pull': {
+    title: '📥 serverPull() — Read Sheets', status: 'done',
+    files: ['Code.gs (line 25–87)'],
+    functions: ['serverPull()', 'inferUnit(name)'],
+    description: 'Đọc sheet PHONG (danh sách phòng) và CONG_VIEC (master cấu kiện). CONG_VIEC format dọc: col A=ID, B=STT, C=Gewerk, D=ten_vl_german, E=don_vi, F=kieu_tinh. inferUnit() tự suy don_vi/kieu_tinh nếu cột E/F trống (Rohr/Stange/Schiene → m, còn lại → Stk).',
+    prompt: 'Em hãy đọc hàm serverPull() và inferUnit() trong Code.gs. Tôi muốn sửa logic đọc sheet:'
+  },
+  'server-push': {
+    title: '📤 serverPush() — Write bsGew', status: 'done',
+    files: ['Code.gs (line 140–200)'],
+    functions: ['serverPush()', 'writeDemLe()', 'writeVatLieuNew()', 'writePhongNew()'],
+    description: 'Nhận JSON từ app → ghi dem_le vào bsGew sheet (mỗi record = 1 row). writeDemLe() tính tổng values[]. Trả về mapped_ids để app cập nhật sync_status. Cũng xử lý vat_lieu_new và phong_new.',
+    prompt: 'Em hãy đọc hàm serverPush() và writeDemLe() trong Code.gs. Tôi muốn sửa format dữ liệu ghi vào sheet:'
+  },
+  'server-upload': {
+    title: '🖼️ serverUploadImage() — Drive', status: 'done',
+    files: ['Code.gs (line 162–197)'],
+    functions: ['serverUploadImage()', 'getOrCreateSubfolder()'],
+    description: 'Upload ảnh base64 lên Google Drive. getOrCreateSubfolder(): tạo thư mục theo tên phòng nếu chưa có. Lưu dưới dạng JPEG. Trả về drive_url để app lưu vào IndexedDB.',
+    prompt: 'Em hãy đọc hàm serverUploadImage() trong Code.gs. Tôi muốn cải thiện cách lưu ảnh lên Drive:'
+  },
+  'server-addmat': {
+    title: '➕ serverAddMaterial() — CONG_VIEC', status: 'done',
+    files: ['Code.gs (line 88–139)'],
+    functions: ['serverAddMaterial()'],
+    description: 'Thêm cấu kiện mới vào CONG_VIEC sheet. Tìm hàng cuối cùng của cùng Gewerk → insertRowAfter() → ghi (ID auto, STT, nhom, ten_vl_german, don_vi, kieu_tinh). Giữ format dọc, không phá cấu trúc sheet.',
+    prompt: 'Em hãy đọc hàm serverAddMaterial() trong Code.gs. Tôi muốn sửa logic thêm cấu kiện mới:'
+  },
+  'idb-local': {
+    title: '💾 IndexedDB Stores', status: 'done',
+    files: ['index.html (line 373–385)'],
+    functions: ['openDB() — upgrade handler'],
+    description: '4 stores: phong (keyPath: id), vat_lieu (keyPath: ma_vl, index: nhom), dem_le (keyPath: local_id, indexes: ma_phong, sync_status), anh (keyPath: anh_id, index: ma_phong). DB name: AufmaBV3, version 1.',
+    prompt: 'Em hãy đọc hàm openDB() trong index.html (dòng 373–385). Tôi muốn thêm store hoặc thay đổi schema:'
+  },
+  'sheets-cong': {
+    title: '📊 CONG_VIEC Sheet', status: 'done',
+    files: ['Code.gs', 'Google Sheets'],
+    functions: ['serverPull() đọc', 'serverAddMaterial() ghi'],
+    description: 'Master list cấu kiện. Format dọc: A=ID, B=STT, C=Gewerk, D=ten_vl_german, E=don_vi, F=kieu_tinh. CỐ ĐỊNH cấu trúc — không được thay đổi layout. Gewerke: Heizung, Kälte, Befestigung/Halterung, Lüftung...',
+    prompt: 'Sheet CONG_VIEC trong Google Sheets. Google Sheet ID: 1Q9AQdT6K8zxsKUMk1mzm5JS1tgBXi_BbV45BpoP7aTM'
+  },
+  'sheets-phong': {
+    title: '🏢 PHONG Sheet', status: 'done',
+    files: ['Code.gs — serverPull()'],
+    functions: ['serverPull() đọc', 'writePhongNew() ghi'],
+    description: 'Danh sách phòng/zone. Cols: id, ma_phong, ten_phong, tang, khu_vuc. Được đọc khi sync lần đầu → lưu vào IndexedDB "phong". Phòng mới tạo trong app được ghi ngược lại sheet khi Save.',
+    prompt: 'Sheet PHONG trong Google Sheets. Google Sheet ID: 1Q9AQdT6K8zxsKUMk1mzm5JS1tgBXi_BbV45BpoP7aTM'
+  },
+  'sheets-bsgew': {
+    title: '📝 bsGew Sheet', status: 'done',
+    files: ['Code.gs — writeDemLe()'],
+    functions: ['writeDemLe()', 'serverPush()'],
+    description: 'Sheet chứa dữ liệu đo đạc thực tế. Mỗi row = 1 cấu kiện của 1 phòng. Cols: local_id, ma_phong, tang, nhom, grosse, ten_vl_german, tong, don_vi, kieu_tinh, he_so, sheet_id. Đây là output chính của app.',
+    prompt: 'Sheet bsGew trong Google Sheets. Google Sheet ID: 1Q9AQdT6K8zxsKUMk1mzm5JS1tgBXi_BbV45BpoP7aTM'
+  },
+  'drive': {
+    title: '📁 Google Drive', status: 'done',
+    files: ['Code.gs — serverUploadImage()'],
+    functions: ['getOrCreateSubfolder()', 'DriveApp.getFolderById()'],
+    description: 'Lưu ảnh công trường. Folder ID: 1W1aM9cSVX2u1PXtjEhPN0OxC4329OE1u. Tự tạo subfolder theo tên phòng. File được lưu là JPEG. URL trả về được lưu trong IndexedDB để hiển thị sau.',
+    prompt: 'Em hãy đọc hàm serverUploadImage() trong Code.gs. Google Drive Folder ID: 1W1aM9cSVX2u1PXtjEhPN0OxC4329OE1u'
+  },
+};
+
+// ── Graph data ─────────────────────────────────────────────────
+const groupColors = {
+  screen: '#0ea5e9',
+  sheet: '#8b5cf6',
+  logic: '#10b981',
+  data: '#f97316',
+  gas: '#eab308',
+  output: '#ec4899',
+  storage: '#6b7280',
+};
+
+// Source file → color mapping (used in filter buttons + detail panels)
+const sfColors = {
+  'index.html': '#38bdf8',  // frontend — blue
+  'Code.gs':    '#eab308',  // GAS backend — yellow
+  'Google':     '#94a3b8',  // external Google services — gray
+};
+
+const initialPositions = {
+  // Row 0: Screens
+  's1':           { x: 120, y: 60  },
+  's2':           { x: 370, y: 60  },
+  's3':           { x: 620, y: 60  },
+  // Row 1: Bottom sheets + ctx menu
+  'bs-newcard':   { x: 120, y: 200 },
+  'bs-gew':       { x: 370, y: 200 },
+  'ctx-menu':     { x: 620, y: 200 },
+  'bs-newmat':    { x: 870, y: 200 },
+  // Row 2: Render/Logic layer
+  'render-s1':    { x: 120, y: 340 },
+  'render-s2':    { x: 370, y: 340 },
+  'build-mr':     { x: 620, y: 340 },
+  'sync':         { x: 870, y: 340 },
+  // Row 3: Data + Output
+  'indexeddb':    { x: 200, y: 490 },
+  'idb-local':    { x: 500, y: 490 },
+  'excel':        { x: 750, y: 490 },
+  'photo':        { x: 950, y: 490 },
+  // Row 4: GAS Backend
+  'gas-entry':    { x: 200, y: 640 },
+  'server-pull':  { x: 430, y: 640 },
+  'server-push':  { x: 660, y: 640 },
+  'server-upload':{ x: 890, y: 640 },
+  'server-addmat':{ x: 1100,y: 640 },
+  // Row 5: Storage
+  'sheets-phong': { x: 200, y: 780 },
+  'sheets-cong':  { x: 450, y: 780 },
+  'sheets-bsgew': { x: 700, y: 780 },
+  'drive':        { x: 950, y: 780 },
+};
+
+const nodesData = [
+  // ── index.html (frontend — all UI, logic, local storage) ──────────
+  { id: 's1',           label: '🏠 S1 — Bìa List',          labelEN: '🏠 S1 — Card List',           group: 'screen',  sf: 'index.html' },
+  { id: 's2',           label: '📋 S2 — Phòng Detail',       labelEN: '📋 S2 — Room Detail',          group: 'screen',  sf: 'index.html' },
+  { id: 's3',           label: '🔍 S3 — Material Selector',  labelEN: '🔍 S3 — Material Selector',    group: 'screen',  sf: 'index.html' },
+  { id: 'bs-newcard',   label: '➕ BS — Tạo Bìa Mới',        labelEN: '➕ BS — New Card',             group: 'sheet',   sf: 'index.html' },
+  { id: 'bs-gew',       label: '⚙️ BS — Thêm Gewerk/DN',    labelEN: '⚙️ BS — Add Gewerk/DN',       group: 'sheet',   sf: 'index.html' },
+  { id: 'ctx-menu',     label: '☰ Context Menu ···',         labelEN: '☰ Context Menu ···',           group: 'sheet',   sf: 'index.html' },
+  { id: 'bs-newmat',    label: '🆕 BS — Thêm Cấu Kiện Mới', labelEN: '🆕 BS — Add New Item',         group: 'sheet',   sf: 'index.html' },
+  { id: 'render-s1',    label: '🔧 renderS1()',               labelEN: '🔧 renderS1()',                group: 'logic',   sf: 'index.html' },
+  { id: 'render-s2',    label: '🔧 renderS2()',               labelEN: '🔧 renderS2()',                group: 'logic',   sf: 'index.html' },
+  { id: 'build-mr',     label: '🔧 buildMR()\n⭐ God Node',  labelEN: '🔧 buildMR()\n⭐ God Node',   group: 'logic',   sf: 'index.html' },
+  { id: 'sync',         label: '🔄 saveAndSync()\ndoSync()', labelEN: '🔄 saveAndSync()\ndoSync()',   group: 'logic',   sf: 'index.html' },
+  { id: 'indexeddb',    label: '🗄️ IndexedDB\nAufmaBV3',    labelEN: '🗄️ IndexedDB\nAufmaBV3',     group: 'data',    sf: 'index.html' },
+  { id: 'idb-local',    label: '💾 4 Stores\nphong/vat_lieu\ndem_le/anh', labelEN: '💾 4 Stores\nroom/material\ndata/photo', group: 'data', sf: 'index.html' },
+  { id: 'excel',        label: '📊 Excel Export\n(Inline XLSX)', labelEN: '📊 Excel Export\n(Inline XLSX)', group: 'output', sf: 'index.html' },
+  { id: 'photo',        label: '📷 Photo\nCapture',          labelEN: '📷 Photo\nCapture',            group: 'output',  sf: 'index.html' },
+  // ── Code.gs (GAS backend — Google Apps Script) ────────────────────
+  { id: 'gas-entry',    label: '⚡ GAS doGet()\nWebApp Entry',labelEN: '⚡ GAS doGet()\nWebApp Entry', group: 'gas',    sf: 'Code.gs'    },
+  { id: 'server-pull',  label: '📥 serverPull()\nRead Sheets', labelEN: '📥 serverPull()\nRead Sheets', group: 'gas',  sf: 'Code.gs'    },
+  { id: 'server-push',  label: '📤 serverPush()\nWrite bsGew', labelEN: '📤 serverPush()\nWrite bsGew', group: 'gas',  sf: 'Code.gs'    },
+  { id: 'server-upload',label: '🖼️ serverUpload\nImage()',   labelEN: '🖼️ serverUpload\nImage()',    group: 'gas',    sf: 'Code.gs'    },
+  { id: 'server-addmat',label: '➕ serverAdd\nMaterial()',    labelEN: '➕ serverAdd\nMaterial()',     group: 'gas',    sf: 'Code.gs'    },
+  // ── Google (external services — not our code) ─────────────────────
+  { id: 'sheets-phong', label: '🏢 PHONG\nSheet',            labelEN: '🏢 ROOMS\nSheet',              group: 'storage', sf: 'Google'     },
+  { id: 'sheets-cong',  label: '📊 CONG_VIEC\nSheet',        labelEN: '📊 WORK_ITEMS\nSheet',         group: 'storage', sf: 'Google'     },
+  { id: 'sheets-bsgew', label: '📝 bsGew\nSheet',            labelEN: '📝 bsGew\nSheet',              group: 'storage', sf: 'Google'     },
+  { id: 'drive',        label: '📁 Google Drive\nPhoto Storage', labelEN: '📁 Google Drive\nPhoto Storage', group: 'storage', sf: 'Google' },
+];
+
+const edgesData = [
+  // Screen navigation
+  { id:'e1',  source:'s1',          target:'bs-newcard',    label:'FAB (+)',            labelEN:'FAB (+)',              dashed:false, tooltip:'Bấm nút FAB (+) ở S1 → mở Bottom Sheet tạo Measurement Card mới (Neues Aufmaßblatt)',                tooltipEN:'Tap FAB (+) on S1 → opens Bottom Sheet to create a new Measurement Card' },
+  { id:'e2',  source:'s1',          target:'s2',            label:'click card',         labelEN:'click card',           dashed:false, tooltip:'Click vào card → openCard() → set curPhong → showScreen(s2) → renderS2()',                          tooltipEN:'Click a card → openCard() → set curPhong → showScreen(s2) → renderS2()' },
+  { id:'e3',  source:'s2',          target:'bs-gew',        label:'+ Gewerk/DN',        labelEN:'+ Gewerk/DN',          dashed:false, tooltip:'Bấm nút "+ Gewerk / DN" trong bottom bar → openBsGew(curPhong.card_nhom, false)',                   tooltipEN:'Tap "+ Gewerk / DN" in bottom bar → openBsGew(curPhong.card_nhom, false)' },
+  { id:'e4',  source:'s2',          target:'ctx-menu',      label:'··· header',         labelEN:'··· header',           dashed:false, tooltip:'Bấm nút ··· trên Gewerk header → showGewCtx(gew, btnEl) hiện context menu',                        tooltipEN:'Tap ··· on Gewerk header → showGewCtx(gew, btnEl) shows context menu' },
+  { id:'e5',  source:'s2',          target:'photo',         label:'📷 Foto',            labelEN:'📷 Photo',             dashed:false, tooltip:'Bấm label 📷 Foto → input[capture=environment] → capturePhoto(event)',                              tooltipEN:'Tap 📷 Photo → input[capture=environment] → capturePhoto(event)' },
+  { id:'e6',  source:'bs-gew',      target:'s3',            label:'goToS3()',           labelEN:'goToS3()',              dashed:false, tooltip:'Sau khi chọn DN → goToS3() → showScreen(s3) → renderS3() hiện danh sách cấu kiện để chọn',         tooltipEN:'After selecting DN → goToS3() → showScreen(s3) → renderS3() shows item list' },
+  { id:'e7',  source:'ctx-menu',    target:'bs-newmat',     label:'thêm cấu kiện mới', labelEN:'add new item',         dashed:false, tooltip:'Chọn "Thêm cấu kiện mới" trong menu → openNewMatSheet(gew)',                                       tooltipEN:'Select "Add new item" in menu → openNewMatSheet(gew)' },
+  { id:'e8',  source:'ctx-menu',    target:'bs-gew',        label:'thêm DN mới',       labelEN:'add new DN',           dashed:false, tooltip:'Chọn "Thêm DN mới" trong menu → openBsGew(gew, true) với gewerk locked',                           tooltipEN:'Select "Add new DN" in menu → openBsGew(gew, true) with gewerk locked' },
+  { id:'e9',  source:'s3',          target:'render-s2',     label:'confirmMaterials()', labelEN:'confirmMaterials()',   dashed:false, tooltip:'Xác nhận chọn cấu kiện → confirmMaterials() tạo IndexedDB records → quay về S2 → renderS2()',       tooltipEN:'Confirm item selection → confirmMaterials() creates IndexedDB records → back to S2 → renderS2()' },
+  // Render layer
+  { id:'e10', source:'s1',          target:'render-s1',     label:'init/goS1()',        labelEN:'init/goS1()',          dashed:true,  tooltip:'renderS1() được gọi khi: khởi động, goS1(), sau doSync(), sau createCard()',                        tooltipEN:'renderS1() called on: startup, goS1(), after doSync(), after createCard()' },
+  { id:'e11', source:'s2',          target:'render-s2',     label:'openCard/save',      labelEN:'openCard/save',        dashed:true,  tooltip:'renderS2() được gọi khi: openCard(), sau confirm materials, sau save',                               tooltipEN:'renderS2() called on: openCard(), after confirm materials, after save' },
+  { id:'e12', source:'render-s2',   target:'build-mr',      label:'mỗi cấu kiện',       labelEN:'per item row',         dashed:false, tooltip:'renderS2() gọi buildMR(rec) cho từng record trong mỗi DN block',                                    tooltipEN:'renderS2() calls buildMR(rec) for each record in each DN block' },
+  // IndexedDB interactions
+  { id:'e13', source:'render-s1',   target:'indexeddb',     label:'dbGetAll(dem_le)',   labelEN:'dbGetAll(dem_le)',     dashed:false, tooltip:'Đọc tất cả dem_le → group by card_id → tính tổng values → render cards',                            tooltipEN:'Read all dem_le → group by card_id → sum values → render cards' },
+  { id:'e14', source:'render-s2',   target:'indexeddb',     label:'dbIdx(ma_phong)',    labelEN:'dbIdx(ma_phong)',      dashed:false, tooltip:'Đọc dem_le lọc theo ma_phong + nhom (card_nhom) → group by Gewerk → DN',                            tooltipEN:'Read dem_le filtered by ma_phong + nhom → group by Gewerk → DN' },
+  { id:'e15', source:'build-mr',    target:'indexeddb',     label:'read/write values',  labelEN:'read/write values',   dashed:false, tooltip:'buildMR() tạo handlers: tapVal() → pVal() → dbGet + dbPut với values array mới',                    tooltipEN:'buildMR() creates handlers: tapVal() → pVal() → dbGet + dbPut with new values array' },
+  { id:'e16', source:'indexeddb',   target:'idb-local',     label:'4 stores',           labelEN:'4 stores',            dashed:false, tooltip:'IndexedDB AufmaBV3 chứa 4 stores: phong, vat_lieu, dem_le (dữ liệu chính), anh (ảnh)',              tooltipEN:'IndexedDB AufmaBV3 contains 4 stores: rooms, materials, measurements (main data), photos' },
+  { id:'e17', source:'excel',       target:'indexeddb',     label:'dbGetAll(dem_le)',   labelEN:'dbGetAll(dem_le)',     dashed:false, tooltip:'exportExcel() đọc tất cả dem_le → bỏ total=0 → sort → build XLSX bytes → download',                 tooltipEN:'exportExcel() reads all dem_le → skip total=0 → sort → build XLSX bytes → download' },
+  { id:'e18', source:'photo',       target:'indexeddb',     label:'dbPut(anh)',         labelEN:'dbPut(photo)',         dashed:false, tooltip:'capturePhoto() → FileReader base64 → dbPut anh store với sync_status=pending',                      tooltipEN:'capturePhoto() → FileReader base64 → dbPut photo store with sync_status=pending' },
+  // Sync engine
+  { id:'e19', source:'s2',          target:'sync',          label:'bấm 💾 Save',        labelEN:'tap 💾 Save',          dashed:false, tooltip:'saveAndSync() đọc pending dem_le → push lên GAS → upload ảnh pending → updateBadge()',              tooltipEN:'saveAndSync() reads pending dem_le → push to GAS → upload pending photos → updateBadge()' },
+  { id:'e20', source:'sync',        target:'indexeddb',     label:'read pending',       labelEN:'read pending',        dashed:false, tooltip:'Lọc dem_le có sync_status=pending và values.length > 0 + anh có data và pending',                    tooltipEN:'Filter dem_le with sync_status=pending and values.length > 0 + photos with data and pending' },
+  { id:'e21', source:'sync',        target:'gas-entry',     label:'gsRun(serverPush)',   labelEN:'gsRun(serverPush)',    dashed:false, tooltip:'gsRun() gọi google.script.run.serverPush(json) → GAS xử lý → callback với mapped_ids',              tooltipEN:'gsRun() calls google.script.run.serverPush(json) → GAS processes → callback with mapped_ids' },
+  { id:'e22', source:'photo',       target:'gas-entry',     label:'gsRun(uploadImage)', labelEN:'gsRun(uploadImage)',   dashed:false, tooltip:'Sau khi push dem_le xong, loop qua ảnh pending → gsRun serverUploadImage với base64',               tooltipEN:'After pushing dem_le, loop through pending photos → gsRun serverUploadImage with base64' },
+  // GAS layer
+  { id:'e23', source:'gas-entry',   target:'server-pull',   label:'init pull',          labelEN:'init pull',           dashed:true,  tooltip:'Khi khởi động lần đầu (chưa có phòng): doSync() → gsRun(serverPull) → lấy phong + vat_lieu',       tooltipEN:'On first startup (no rooms cached): doSync() → gsRun(serverPull) → fetch rooms + materials' },
+  { id:'e24', source:'gas-entry',   target:'server-push',   label:'on Save',            labelEN:'on Save',             dashed:false, tooltip:'Khi bấm Save: gsRun(serverPush, json) → serverPush() ghi dem_le vào bsGew sheet',                  tooltipEN:'On Save: gsRun(serverPush, json) → serverPush() writes dem_le rows to bsGew sheet' },
+  { id:'e25', source:'gas-entry',   target:'server-upload', label:'on photo sync',      labelEN:'on photo sync',       dashed:false, tooltip:'Khi có ảnh pending: gsRun(serverUploadImage, json) → lưu vào Drive → trả drive_url',               tooltipEN:'When photo pending: gsRun(serverUploadImage, json) → save to Drive → return drive_url' },
+  { id:'e26', source:'bs-newmat',   target:'gas-entry',     label:'gsRun(addMaterial)', labelEN:'gsRun(addMaterial)',   dashed:false, tooltip:'addNewMaterial() gọi gsRun(serverAddMaterial, json) để ghi cấu kiện mới vào CONG_VIEC',             tooltipEN:'addNewMaterial() calls gsRun(serverAddMaterial, json) to write new item to WORK_ITEMS sheet' },
+  { id:'e27', source:'bs-newmat',   target:'indexeddb',     label:'tạo records\ncác DN', labelEN:'create records\nall DNs', dashed:false, tooltip:'addNewMaterial() tạo dem_le record mới cho TẤT CẢ DN hiện có của Gewerk đó',              tooltipEN:'addNewMaterial() creates new dem_le records for ALL existing DNs of that Gewerk' },
+  // GAS → Sheets/Drive
+  { id:'e28', source:'server-pull', target:'sheets-phong',  label:'read PHONG',         labelEN:'read ROOMS',          dashed:false, tooltip:'Đọc sheet PHONG (cols: id, ma_phong, ten_phong, tang, khu_vuc) → trả về cho app',                  tooltipEN:'Read ROOMS sheet (cols: id, room_no, room_name, floor, zone) → return to app' },
+  { id:'e29', source:'server-pull', target:'sheets-cong',   label:'read CONG_VIEC',     labelEN:'read WORK_ITEMS',     dashed:false, tooltip:'Đọc sheet CONG_VIEC cols A-F → map thành vat_lieu objects → inferUnit() nếu thiếu E/F',             tooltipEN:'Read WORK_ITEMS sheet cols A-F → map to material objects → inferUnit() if E/F missing' },
+  { id:'e30', source:'server-push', target:'sheets-bsgew',  label:'ghi rows',           labelEN:'write rows',          dashed:false, tooltip:'writeDemLe() ghi mỗi dem_le record thành 1 row: local_id, phong, tang, nhom, grosse, ten_vl_german, tong, don_vi...', tooltipEN:'writeDemLe() writes each dem_le record as 1 row: local_id, room, floor, group, size, item_name, total, unit...' },
+  { id:'e31', source:'server-upload',target:'drive',        label:'save JPEG',          labelEN:'save JPEG',           dashed:false, tooltip:'Tạo subfolder theo tên phòng → lưu file JPEG → trả về drive_url',                                  tooltipEN:'Create subfolder per room → save JPEG file → return drive_url' },
+  { id:'e32', source:'server-addmat',target:'sheets-cong',  label:'insertRow()',        labelEN:'insertRow()',          dashed:false, tooltip:'Tìm hàng cuối cùng của Gewerk trong CONG_VIEC → insertRowAfter → ghi (ID,STT,nhom,ten_vl,don_vi,kieu_tinh)', tooltipEN:'Find last row of Gewerk in WORK_ITEMS → insertRowAfter → write (ID,STT,group,item_name,unit,calc_type)' },
+];
+
+// ── Init Cytoscape ────────────────────────────────────────────────
+let cy;
+
+function initCytoscape() {
+  const elements = [];
+  nodesData.forEach(n => {
+    elements.push({ data: { id: n.id, label: n.label, group: n.group, sf: n.sf }, position: initialPositions[n.id] || { x: 400, y: 400 } });
+  });
+  edgesData.forEach(e => {
+    elements.push({ data: { id: e.id, source: e.source, target: e.target, label: e.label, dashed: e.dashed, tooltip: e.tooltip } });
+  });
+
+  cy = cytoscape({
+    container: document.getElementById('cy'),
+    elements: elements,
+    layout: { name: 'preset' },
+    style: [
+      {
+        selector: 'node',
+        style: {
+          'shape': 'roundrectangle', 'width': 'label', 'height': 'label', 'padding': '12px',
+          'background-color': ele => groupColors[ele.data('group')] || '#475569',
+          'background-opacity': 0.18,
+          'border-color': ele => groupColors[ele.data('group')] || '#475569',
+          'border-width': 2, 'label': 'data(label)',
+          'text-valign': 'center', 'text-halign': 'center',
+          'color': '#f1f5f9', 'font-size': '12px',
+          'font-family': 'Segoe UI, system-ui, sans-serif', 'font-weight': '600',
+          'text-wrap': 'wrap', 'text-max-width': '130px', 'overlay-padding': '4px', 'z-index': 10,
+        }
+      },
+      { selector: 'node:selected', style: { 'border-width': 3, 'background-opacity': 0.4, 'border-color': '#f8fafc' } },
+      { selector: 'node.highlighted-node', style: { 'border-width': 3, 'background-opacity': 0.4, 'border-color': '#f8fafc', 'z-index': 20 } },
+      {
+        selector: 'edge',
+        style: {
+          'width': 1.5, 'line-color': '#334155', 'target-arrow-color': '#475569',
+          'target-arrow-shape': 'triangle', 'arrow-scale': 1, 'curve-style': 'bezier',
+          'label': 'data(label)', 'font-size': '9px', 'color': '#64748b',
+          'text-background-color': '#0f172a', 'text-background-opacity': 1,
+          'text-background-padding': '3px', 'text-wrap': 'wrap', 'text-max-width': '90px',
+          'edge-text-rotation': 'autorotate', 'overlay-padding': '8px',
+        }
+      },
+      { selector: 'edge[?dashed]', style: { 'line-style': 'dashed', 'line-dash-pattern': [6, 4], 'line-color': '#475569', 'target-arrow-color': '#475569' } },
+      { selector: 'edge.highlighted', style: { 'line-color': '#38bdf8', 'target-arrow-color': '#38bdf8', 'width': 2.5, 'z-index': 20 } },
+    ],
+    wheelSensitivity: 0.3, minZoom: 0.1, maxZoom: 3,
+    boxSelectionEnabled: true,
+    selectionType: 'single',
+  });
+
+  // Load saved positions (nếu có)
+  const STORAGE_KEY = 'aufmab_cy_positions';
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      const pos = JSON.parse(saved);
+      cy.nodes().forEach(n => { if (pos[n.id()]) n.position(pos[n.id()]); });
+      cy.fit(undefined, 60);
+    } catch(e) { cy.fit(undefined, 60); }
+  } else {
+    cy.fit(undefined, 60);
+  }
+
+  // Auto-save vị trí mỗi khi kéo xong
+  let saveTimer = null;
+  cy.on('dragfree', 'node', function() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function() {
+      const pos = {};
+      cy.nodes().forEach(n => { pos[n.id()] = { x: n.position('x'), y: n.position('y') }; });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(pos));
+    }, 500);
+  });
+
+  // Ctrl+drag → box select
+  cy.on('cxttap', function(){}); // placeholder to enable right-click capture
+  document.getElementById('cy').addEventListener('mousedown', function(e) {
+    if (e.ctrlKey || e.metaKey) cy.userPanningEnabled(false);
+  });
+  document.addEventListener('mouseup', function() { if (cy) cy.userPanningEnabled(true); });
+
+  cy.on('tap', 'node', function(evt) {
+    const id = evt.target.id();
+    // Nếu Ctrl/Meta → thêm/bỏ vào selectedNodes (handled by initMultiSelect)
+    if (evt.originalEvent && (evt.originalEvent.ctrlKey || evt.originalEvent.metaKey || evt.originalEvent.shiftKey)) return;
+    // Single click: highlight node + connected edges
+    cy.nodes().removeClass('highlighted-node');
+    cy.edges().removeClass('highlighted');
+    evt.target.addClass('highlighted-node');
+    evt.target.connectedEdges().addClass('highlighted');
+    const detail = nodeDetails[id];
+    if (detail) showPanel(detail, evt.target.data('label'), id);
+  });
+
+  cy.on('tap', function(evt) {
+    if (evt.target === cy) {
+      closePanel();
+      cy.nodes().removeClass('highlighted-node');
+      cy.edges().removeClass('highlighted');
+    }
+  });
+
+  const tooltip = document.getElementById('edge-tooltip');
+  const ttLabel = document.getElementById('tt-label');
+  const ttBody  = document.getElementById('tt-body');
+
+  cy.on('mouseover', 'edge', function(evt) {
+    const d = evt.target.data();
+    ttLabel.textContent = d.label || '';
+    ttBody.textContent  = d.tooltip || '';
+    tooltip.style.display = 'block';
+    evt.target.addClass('highlighted');
+  });
+  cy.on('mousemove', 'edge', function(evt) {
+    const e = evt.originalEvent;
+    let x = e.clientX + 16, y = e.clientY - 10;
+    tooltip.style.left = x + 'px'; tooltip.style.top = y + 'px';
+    const r = tooltip.getBoundingClientRect();
+    if (r.right > window.innerWidth - 10)  tooltip.style.left = (e.clientX - r.width - 16) + 'px';
+    if (r.bottom > window.innerHeight - 10) tooltip.style.top = (e.clientY - r.height - 10) + 'px';
+  });
+  cy.on('mouseout', 'edge', function(evt) {
+    tooltip.style.display = 'none';
+    evt.target.removeClass('highlighted');
+  });
+}
+
+// ── Panel ─────────────────────────────────────────────────────────
+let currentNodeId = null;
+
+function showPanel(detail, fallbackLabel, nodeId) {
+  if (typeof detail === 'string') { nodeId = detail; detail = nodeDetails[nodeId]; fallbackLabel = nodeId; if (!detail) return; }
+  // Apply language
+  if (currentLang === 'EN' && nodeId && nodeDetailsEN[nodeId]) {
+    detail = nodeDetailsEN[nodeId];
+    const nd = nodesData.find(n => n.id === nodeId);
+    if (nd && nd.labelEN) fallbackLabel = nd.labelEN;
+  }
+  const panel = document.getElementById('detail-panel');
+  const title = document.getElementById('panel-title');
+  const body  = document.getElementById('panel-body');
+  title.textContent = detail.title || fallbackLabel;
+  panel.classList.remove('collapsed');
+  const sc = detail.status === 'done' ? 'status-done' : 'status-todo';
+  const st = detail.status === 'done' ? '✅ Done' : '⚠️ Cần làm / Cải thiện';
+  const filesHtml = (detail.files || []).map(f => `<div class="file-item">${f}</div>`).join('');
+  const fnsHtml   = (detail.functions || []).map(f => `<span class="fn-item">${f}</span>`).join('');
+  body.innerHTML = `
+    <span class="status-badge ${sc}">${st}</span>
+    <div class="panel-desc">${detail.description || ''}</div>
+    ${filesHtml ? `<div class="panel-section-title">📁 Files / Location</div><div class="file-list">${filesHtml}</div>` : ''}
+    ${fnsHtml   ? `<div class="panel-section-title">⚡ Key Functions</div><div class="fn-list">${fnsHtml}</div>` : ''}
+    <button class="copy-btn" id="copy-prompt-btn">📋 Copy prompt cho Claude</button>
+    <div class="chat-section" id="chat-section">
+      <div class="chat-section-title">🤖 Hỏi Gemini về module này</div>
+      <div style="font-size:10px;color:#475569;margin-bottom:8px">7 keys · tự xoay khi hết quota · gemini-2.0-flash</div>
+      <div class="chat-messages" id="chat-messages">
+        <div class="chat-msg ai">👋 Hỏi tôi về <strong>${detail.title}</strong>.<br>Hoặc mô tả điều muốn sửa → bấm <strong>✨ Viết prompt cho Claude</strong>.</div>
+      </div>
+      <div class="chat-input-row">
+        <textarea class="chat-input" id="chat-input" placeholder="Hỏi hoặc mô tả điều muốn sửa..." onkeydown="handleChatKey(event)"></textarea>
+        <button class="chat-send" id="chat-send" onclick="sendChat()">Gửi</button>
+      </div>
+      <button id="gen-prompt-btn" onclick="generateClaudePrompt()" style="width:100%;margin-top:8px;padding:9px;background:linear-gradient(135deg,#4c1d95,#1d4ed8);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">✨ Nhờ Gemini viết prompt cho Claude</button>
+    </div>
+  `;
+  document.getElementById('copy-prompt-btn').addEventListener('click', function() { copyToClipboard(detail.prompt, this); });
+  currentNodeId = nodeId;
+}
+
+function closePanel() { document.getElementById('detail-panel').classList.add('collapsed'); }
+
+function copyToClipboard(text, btn) {
+  const doSuccess = () => { btn.textContent = '✅ Đã copy!'; btn.classList.add('copied'); setTimeout(() => { btn.innerHTML = '📋 Copy prompt cho Claude'; btn.classList.remove('copied'); }, 2000); };
+  if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(doSuccess).catch(() => { fallbackCopy(text); doSuccess(); }); }
+  else { fallbackCopy(text); doSuccess(); }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea'); ta.value = text;
+  ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+}
+
+function resetLayout() {
+  if (!cy) return;
+  localStorage.removeItem('aufmab_cy_positions');
+  cy.nodes().forEach(node => { const pos = initialPositions[node.id()]; if (pos) node.position({ x: pos.x, y: pos.y }); });
+  cy.fit(undefined, 60);
+}
+
+function switchTab(tab) {
+  ['graph','dataflow','overview','mermaid'].forEach(t => {
+    document.getElementById('tab-btn-'+t).classList.toggle('active', tab === t);
+  });
+  document.getElementById('tab-graph').classList.toggle('hidden', tab !== 'graph');
+  document.getElementById('tab-dataflow').classList.toggle('hidden', tab !== 'dataflow');
+  document.getElementById('tab-overview').classList.toggle('hidden', tab !== 'overview');
+  document.getElementById('tab-mermaid').classList.toggle('active', tab === 'mermaid');
+  if (tab === 'graph' && cy) cy.fit(undefined, 60);
+  if (tab === 'dataflow') { if (!cyDf) initDataflow(); else cyDf.fit(undefined, 40); }
+  if (tab === 'overview') { if (!cyOverview) initOverview(); else cyOverview.fit(undefined, 60); }
+}
+
+let edgeFontSize = 9, nodeFontSize = 12;
+function changeEdgeFontSize(delta) { edgeFontSize = Math.min(20, Math.max(6, edgeFontSize + delta)); cy.edges().style('font-size', edgeFontSize + 'px'); }
+function changeNodeFontSize(delta) { nodeFontSize = Math.min(20, Math.max(6, nodeFontSize + delta)); cy.nodes().style('font-size', nodeFontSize + 'px'); }
+
+// ── Gemini Chat ─────────────────────────────────────────────────
+const GEMINI_KEYS = [
+  'AIzaSyCIlFjhYwLIYucZrfYu0Ff-skW9EWC79ME',
+  'AIzaSyB4EEUzldCLo7uabgTgypWqWi5fli99_74',
+  'AIzaSyBmGWtKIRKS0oQrs6_par00wPgVtg6Rrug',
+  'AIzaSyAnizGB6dln114qlJuWlEztI0DtmS6UlPU',
+  'AIzaSyDqaHuZJkLrI7ec3TA1q_qVVGwo_W2caPY',
+  'AIzaSyD8RnSrfI-hg4-g8x2gkJRL1bUIOGfUnmE',
+  'AIzaSyD-F4jTkcNLBpYjmajdOSgt4xKh0O0HNPM'
+];
+const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-8b'];
+let keyIndex = parseInt(localStorage.getItem('geminiKeyIdx_aufmab') || '0') % GEMINI_KEYS.length;
+let modelIndex = 0;
+
+function rotateKey() { keyIndex = (keyIndex + 1) % GEMINI_KEYS.length; localStorage.setItem('geminiKeyIdx_aufmab', keyIndex); }
+
+function addChatMsg(role, text, isHtml = false) {
+  const msgs = document.getElementById('chat-messages');
+  if (!msgs) return null;
+  const div = document.createElement('div'); div.className = 'chat-msg ' + role;
+  if (isHtml) div.innerHTML = text; else div.textContent = text;
+  msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight; return div;
+}
+
+function handleChatKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } }
+
+function buildModuleContext(detail) {
+  return `Dự án: AufmaB Beta — app nhập liệu đo đạc MEP tại công trường Đức.
+Tech stack: Một file HTML duy nhất (index.html ~1540 dòng) chứa toàn bộ app. Backend: Google Apps Script (Code.gs). Storage: IndexedDB offline + Google Sheets + Drive. Chạy trên iPad tại công trường, offline-first.
+
+Module đang xem:
+- Tên: ${detail.title}
+- Mô tả: ${detail.description}
+- Files/Location: ${(detail.files||[]).join(', ')}
+- Key functions: ${(detail.functions||[]).join(', ')}`;
+}
+
+async function callGemini(prompt, maxTokens = 800) {
+  // Thử proxy OAuth local (port 11435) trước — không cần API key
+  try {
+    const res = await fetch('http://localhost:11435/chat/completions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'gemini-2.0-flash', messages: [{ role: 'user', content: prompt }], max_tokens: maxTokens })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const text = data.choices?.[0]?.message?.content || '';
+      if (text) return { text, model: 'proxy-oauth' };
+    }
+  } catch(e) { /* proxy không chạy → fallback xuống API keys */ }
+
+  // Fallback: API keys trực tiếp
+  let lastErr = null;
+  for (let attempt = 0; attempt < GEMINI_KEYS.length; attempt++) {
+    const key = GEMINI_KEYS[keyIndex];
+    const model = GEMINI_MODELS[modelIndex] || GEMINI_MODELS[0];
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 } })
+      });
+      const data = await res.json();
+      if (data.error) {
+        const code = data.error.code || 0; const msg = data.error.message || '';
+        if (code === 429 || msg.includes('quota') || msg.includes('limit: 0')) { rotateKey(); lastErr = msg; continue; }
+        if (code === 400 && msg.includes('not found')) { modelIndex = (modelIndex + 1) % GEMINI_MODELS.length; lastErr = msg; continue; }
+        throw new Error(msg);
+      }
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      if (!text) throw new Error('Không có phản hồi từ AI.');
+      rotateKey();
+      return { text, model };
+    } catch(e) { lastErr = e.message; rotateKey(); }
+  }
+  throw new Error('❌ Proxy (port 11435) không chạy và tất cả API keys hết quota. Hãy khởi động gemini-proxy.js hoặc dùng API key còn free tier.');
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const question = input?.value.trim();
+  if (!question) return;
+  const detail = nodeDetails[currentNodeId];
+  if (!detail) return;
+  input.value = '';
+  addChatMsg('user', question);
+  const sendBtn = document.getElementById('chat-send');
+  const genBtn = document.getElementById('gen-prompt-btn');
+  if (sendBtn) sendBtn.disabled = true;
+  if (genBtn) genBtn.disabled = true;
+  const thinkDiv = addChatMsg('ai thinking', '⏳ Đang hỏi Gemini...');
+  const prompt = `${buildModuleContext(detail)}\n\nCâu hỏi: ${question}\n\nTrả lời ngắn gọn, thực tế, bằng tiếng Việt. Nếu cần sửa code thì nêu rõ dòng code cụ thể.`;
+  try {
+    const result = await callGemini(prompt, 700);
+    if (thinkDiv) { thinkDiv.className = 'chat-msg ai'; thinkDiv.textContent = result.text; }
+  } catch (err) {
+    if (thinkDiv) { thinkDiv.className = 'chat-msg ai'; thinkDiv.textContent = '❌ ' + (err.message || 'Lỗi.'); }
+  } finally {
+    if (sendBtn) sendBtn.disabled = false;
+    if (genBtn) genBtn.disabled = false;
+    const msgs = document.getElementById('chat-messages');
+    if (msgs) msgs.scrollTop = 9999;
+  }
+}
+
+async function generateClaudePrompt() {
+  const input = document.getElementById('chat-input');
+  const userWant = input?.value.trim();
+  if (!userWant) { addChatMsg('ai', '💡 Mô tả điều muốn sửa trong ô chat trước, rồi bấm nút này.'); return; }
+  const detail = nodeDetails[currentNodeId];
+  if (!detail) return;
+  input.value = '';
+  addChatMsg('user', '[Nhờ Gemini viết prompt] ' + userWant);
+  const sendBtn = document.getElementById('chat-send');
+  const genBtn = document.getElementById('gen-prompt-btn');
+  if (sendBtn) sendBtn.disabled = true;
+  if (genBtn) genBtn.disabled = true;
+  const thinkDiv = addChatMsg('ai thinking', '✍️ Gemini đang viết prompt cho Claude...');
+  const prompt = `${buildModuleContext(detail)}\n\nNgười dùng muốn nhờ Claude Code thực hiện:\n"${userWant}"\n\nHãy viết prompt hoàn chỉnh bằng tiếng Việt để gửi cho Claude Code, bao gồm:\n1. Chỉ rõ file nào và dòng nào cần đọc/sửa\n2. Yêu cầu kỹ thuật cụ thể\n3. Ràng buộc quan trọng (offline, không CDN, mobile-first, etc.)\n4. Output mong muốn\n\nChỉ viết prompt, không giải thích. Bắt đầu bằng "Em hãy..."`;
+  try {
+    const result = await callGemini(prompt, 900);
+    if (thinkDiv) {
+      thinkDiv.className = 'chat-msg ai';
+      const promptId = 'gen-' + Date.now();
+      thinkDiv.innerHTML = `<div style="font-size:11px;color:#8b5cf6;margin-bottom:6px;font-weight:700">✨ PROMPT CHO CLAUDE:</div><div id="${promptId}" style="white-space:pre-wrap;line-height:1.6">${result.text}</div><button onclick="copyGenPrompt('${promptId}',this)" style="margin-top:8px;padding:5px 12px;background:#4c1d95;border:none;border-radius:5px;color:#fff;font-size:11px;cursor:pointer;font-weight:600">📋 Copy prompt</button>`;
+    }
+  } catch (err) {
+    if (thinkDiv) { thinkDiv.className = 'chat-msg ai'; thinkDiv.textContent = '❌ ' + (err.message || 'Lỗi.'); }
+  } finally {
+    if (sendBtn) sendBtn.disabled = false;
+    if (genBtn) genBtn.disabled = false;
+    const msgs = document.getElementById('chat-messages');
+    if (msgs) msgs.scrollTop = 9999;
+  }
+}
+
+function copyGenPrompt(elId, btn) {
+  const text = document.getElementById(elId)?.textContent || '';
+  fallbackCopy(text);
+  if (navigator.clipboard) navigator.clipboard.writeText(text).catch(()=>{});
+  btn.textContent = '✅ Đã copy!'; btn.style.background = '#065f46';
+  setTimeout(() => { btn.textContent = '📋 Copy prompt'; btn.style.background = '#4c1d95'; }, 2000);
+}
+
+// ── DATAFLOW TAB ─────────────────────────────────────────────────
+let cyDf = null;
+let dfEdgeFontSize = 9, dfNodeFontSize = 12;
+
+// Edges vẽ theo chiều DATA CHẢY (không phải "ai gọi ai")
+const dfEdgesData = [
+  // ── Navigation / trigger (không có data, chỉ mở form) ──
+  { id:'df1',  source:'s1',          target:'bs-newcard',    label:'mở form',          dashed:false, new:false, tooltip:'User tap FAB → mở Bottom Sheet. Không có data chảy, chỉ điều hướng.' },
+  { id:'df2',  source:'s1',          target:'s2',            label:'curPhong',          dashed:false, new:false, tooltip:'openCard() truyền {ma_phong, tang, ten_phong...} sang S2 để renderS2() biết render phòng nào.' },
+  { id:'df3',  source:'s2',          target:'bs-gew',        label:'mở form',          dashed:false, new:false, tooltip:'Mở Bottom Sheet thêm Gewerk/DN. Truyền card_nhom hiện tại.' },
+  { id:'df4',  source:'s2',          target:'ctx-menu',      label:'mở menu',          dashed:false, new:false, tooltip:'Mở Context Menu. Truyền tên Gewerk để menu biết đang thao tác Gewerk nào.' },
+  { id:'df5',  source:'bs-gew',      target:'s3',            label:'gew + dn list',    dashed:false, new:false, tooltip:'Truyền Gewerk đã chọn + DN list sang S3 để renderS3() hiện danh sách cấu kiện đúng.' },
+  { id:'df6',  source:'ctx-menu',    target:'bs-newmat',     label:'tên Gewerk',       dashed:false, new:false, tooltip:'Truyền tên Gewerk sang form thêm cấu kiện mới.' },
+  { id:'df7',  source:'ctx-menu',    target:'bs-gew',        label:'gew locked',       dashed:false, new:false, tooltip:'Mở form thêm DN mới với Gewerk đã khóa sẵn.' },
+  { id:'df8',  source:'s2',          target:'photo',         label:'trigger chụp',     dashed:false, new:false, tooltip:'Kích hoạt camera input. Không có data truyền đi.' },
+
+  // ── Ghi vào IndexedDB ──
+  { id:'df9',  source:'s3',          target:'indexeddb',     label:'ghi dem_le mới',   dashed:false, new:false, tooltip:'confirmMaterials() tạo dem_le records cho từng DN → dbPut() ghi vào IndexedDB.' },
+  { id:'df10', source:'bs-newmat',   target:'indexeddb',     label:'ghi dem_le mới',   dashed:false, new:false, tooltip:'addNewMaterial() tạo dem_le record cho TẤT CẢ DN hiện có → ghi vào IndexedDB.' },
+  { id:'df11', source:'photo',       target:'indexeddb',     label:'base64 ảnh',       dashed:false, new:false, tooltip:'capturePhoto() → FileReader → base64 → dbPut() ghi vào store "anh" với sync_status=pending.' },
+  { id:'df12', source:'build-mr',    target:'indexeddb',     label:'values[] +1/+5',   dashed:false, new:false, tooltip:'Tap +1/+5: pVal() push giá trị mới → dbPut() ghi values[] vào dem_le record ngay lập tức.' },
+
+  // ── IndexedDB → Render (DATA chảy ra để vẽ màn hình) ──
+  { id:'df13', source:'indexeddb',   target:'render-s1',     label:'tất cả dem_le',    dashed:true,  new:false, tooltip:'renderS1(): dbGetAll(dem_le) → IndexedDB trả toàn bộ records → group by card_id → vẽ card list.' },
+  { id:'df14', source:'indexeddb',   target:'render-s2',     label:'dem_le theo phòng',dashed:true,  new:false, tooltip:'renderS2(): dbIdx(ma_phong) → IndexedDB lọc records của phòng hiện tại → vẽ S2.' },
+  { id:'df15', source:'indexeddb',   target:'build-mr',      label:'values[] hiện tại',dashed:false, new:false, tooltip:'buildMR() đọc values[] từ IDB để tính tổng hiển thị trong mr-box.' },
+  { id:'df16', source:'indexeddb',   target:'excel',         label:'tất cả dem_le',    dashed:false, new:false, tooltip:'exportExcel(): dbGetAll(dem_le) → IndexedDB trả data → build XLSX bytes → download.' },
+  { id:'df17', source:'indexeddb',   target:'sync',          label:'pending records',  dashed:false, new:false, tooltip:'saveAndSync() lọc dem_le pending + anh pending → IndexedDB trả về danh sách cần push lên GAS.' },
+
+  // ── IDB structure ──
+  { id:'df18', source:'indexeddb',   target:'idb-local',     label:'4 stores',         dashed:false, new:false, tooltip:'IndexedDB AufmaBV3 gồm 4 stores: phong, vat_lieu, dem_le, anh.' },
+
+  // ── renderS2 → buildMR ──
+  { id:'df19', source:'render-s2',   target:'build-mr',      label:'record data',      dashed:false, new:false, tooltip:'renderS2() truyền từng dem_le record xuống buildMR() để build DOM row.' },
+
+  // ── Sync → GAS ──
+  { id:'df20', source:'s2',          target:'sync',          label:'trigger Save',     dashed:false, new:false, tooltip:'Bấm 💾 Save → gọi saveAndSync(). Trigger, không có data truyền.' },
+  { id:'df21', source:'sync',        target:'gas-entry',     label:'dem_le JSON',      dashed:false, new:false, tooltip:'gsRun(serverPush, JSON) → truyền toàn bộ pending dem_le lên GAS.' },
+  { id:'df22', source:'photo',       target:'gas-entry',     label:'base64 ảnh',       dashed:false, new:false, tooltip:'Sau khi push dem_le, lấy ảnh pending từ IDB → gsRun(serverUploadImage, base64) lên GAS.' },
+  { id:'df23', source:'bs-newmat',   target:'gas-entry',     label:'cấu kiện mới',     dashed:false, new:false, tooltip:'addNewMaterial() gửi {nhom, ten_vl_german, don_vi, kieu_tinh} lên GAS → ghi CONG_VIEC.' },
+
+  // ── GAS routing ──
+  { id:'df24', source:'gas-entry',   target:'server-push',   label:'dem_le JSON',      dashed:false, new:false, tooltip:'GAS nhận JSON → route sang serverPush() → writeDemLe() ghi vào bsGew sheet.' },
+  { id:'df25', source:'gas-entry',   target:'server-upload', label:'base64 ảnh',       dashed:false, new:false, tooltip:'GAS nhận base64 → route sang serverUploadImage() → lưu JPEG vào Drive.' },
+  { id:'df26', source:'gas-entry',   target:'server-addmat', label:'cấu kiện mới',     dashed:false, new:false, tooltip:'GAS nhận data cấu kiện mới → route sang serverAddMaterial() → ghi CONG_VIEC.' },
+  { id:'df27', source:'gas-entry',   target:'server-pull',   label:'request pull',     dashed:true,  new:false, tooltip:'Khi khởi động lần đầu: doSync() → gsRun(serverPull) → GAS đọc PHONG + CONG_VIEC.' },
+
+  // ── GAS đọc từ Sheets (data chảy từ Sheet vào GAS) ──
+  { id:'df28', source:'sheets-phong',target:'server-pull',   label:'phong data',       dashed:false, new:false, tooltip:'Sheet PHONG → serverPull() map thành mảng phong objects.' },
+  { id:'df29', source:'sheets-cong', target:'server-pull',   label:'vat_lieu data',    dashed:false, new:false, tooltip:'Sheet CONG_VIEC → serverPull() map + inferUnit() → mảng vat_lieu objects.' },
+
+  // ── GAS ghi vào Sheets/Drive ──
+  { id:'df30', source:'server-push', target:'sheets-bsgew',  label:'dem_le rows',      dashed:false, new:false, tooltip:'writeDemLe() ghi mỗi dem_le record thành 1 row trong bsGew sheet.' },
+  { id:'df31', source:'server-upload',target:'drive',        label:'JPEG file',        dashed:false, new:false, tooltip:'Decode base64 → newBlob() → createFile() trong subfolder phòng → lưu JPEG.' },
+  { id:'df32', source:'server-addmat',target:'sheets-cong',  label:'cấu kiện mới',     dashed:false, new:false, tooltip:'insertRowAfter() ghi (ID, STT, nhom, ten_vl_german, don_vi, kieu_tinh) vào CONG_VIEC.' },
+
+  // ── ⭐ KẾT NỐI MỚI — bị thiếu trong sơ đồ gốc ──
+  { id:'df33', source:'server-pull', target:'indexeddb',     label:'⭐ phong + vat_lieu', dashed:false, new:true, tooltip:'⭐ THIẾU TRONG SƠ ĐỒ GỐC: serverPull() trả data về → doSync() ghi phong + vat_lieu vào IndexedDB. Đây là lý do app biết danh sách phòng sau lần đầu mở.' },
+  { id:'df34', source:'server-push', target:'sync',          label:'⭐ mapped_ids',     dashed:true,  new:true, tooltip:'⭐ THIẾU TRONG SƠ ĐỒ GỐC: serverPush() trả {mapped_ids} về → saveAndSync() cập nhật sync_status=synced + sheet_id vào IDB.' },
+  { id:'df35', source:'server-upload',target:'sync',         label:'⭐ drive_url',      dashed:true,  new:true, tooltip:'⭐ THIẾU TRONG SƠ ĐỒ GỐC: serverUploadImage() trả drive_url về → saveAndSync() cập nhật anh record trong IDB.' },
+  { id:'df36', source:'sync',        target:'indexeddb',     label:'cập nhật synced',  dashed:false, new:false, tooltip:'Sau khi GAS trả về: sync ghi sync_status=synced + sheet_id + drive_url vào IDB.' },
+];
+
+const dfInitPositions = {
+  's1':           { x: 120,  y: 60  }, 's2':          { x: 370,  y: 60  }, 's3':          { x: 620,  y: 60  },
+  'bs-newcard':   { x: 120,  y: 200 }, 'bs-gew':      { x: 370,  y: 200 }, 'ctx-menu':    { x: 620,  y: 200 },
+  'bs-newmat':    { x: 870,  y: 200 }, 'render-s1':   { x: 120,  y: 340 }, 'render-s2':   { x: 370,  y: 340 },
+  'build-mr':     { x: 620,  y: 340 }, 'sync':        { x: 870,  y: 340 }, 'indexeddb':   { x: 200,  y: 490 },
+  'idb-local':    { x: 500,  y: 490 }, 'excel':       { x: 750,  y: 490 }, 'photo':       { x: 950,  y: 490 },
+  'gas-entry':    { x: 200,  y: 640 }, 'server-pull': { x: 430,  y: 640 }, 'server-push': { x: 660,  y: 640 },
+  'server-upload':{ x: 890,  y: 640 }, 'server-addmat':{ x:1100, y: 640 }, 'sheets-phong':{ x: 200,  y: 780 },
+  'sheets-cong':  { x: 450,  y: 780 }, 'sheets-bsgew':{ x: 700,  y: 780 }, 'drive':       { x: 950,  y: 780 },
+};
+
+const DF_STORAGE_KEY = 'aufmab_df_positions';
+
+function initDataflow() {
+  const els = [];
+  nodesData.forEach(n => {
+    els.push({ data: { id: n.id, label: n.label, group: n.group, sf: n.sf }, position: (() => { const s = localStorage.getItem(DF_STORAGE_KEY); if(s){try{const p=JSON.parse(s);if(p[n.id])return p[n.id];}catch(e){}} return dfInitPositions[n.id]||{x:400,y:400}; })() });
+  });
+  dfEdgesData.forEach(e => {
+    els.push({ data: { id: e.id, source: e.source, target: e.target, label: e.label, dashed: e.dashed, newEdge: e.new, tooltip: e.tooltip } });
+  });
+
+  cyDf = cytoscape({
+    container: document.getElementById('cy-df'),
+    elements: els,
+    layout: { name: 'preset' },
+    style: [
+      { selector: 'node', style: {
+        'shape': 'roundrectangle', 'width': 'label', 'height': 'label', 'padding': '12px',
+        'background-color': ele => groupColors[ele.data('group')] || '#475569',
+        'background-opacity': 0.18,
+        'border-color': ele => groupColors[ele.data('group')] || '#475569',
+        'border-width': 2, 'label': 'data(label)',
+        'text-valign': 'center', 'text-halign': 'center',
+        'color': '#f1f5f9', 'font-size': '12px',
+        'font-family': 'Segoe UI, system-ui, sans-serif', 'font-weight': '600',
+        'text-wrap': 'wrap', 'text-max-width': '130px', 'overlay-padding': '4px', 'z-index': 10,
+      }},
+      { selector: 'node.df-hl', style: { 'border-width': 3, 'background-opacity': 0.4, 'border-color': '#f8fafc', 'z-index': 20 } },
+      { selector: 'edge', style: {
+        'width': 1.5, 'line-color': '#334155', 'target-arrow-color': '#475569',
+        'target-arrow-shape': 'triangle', 'arrow-scale': 1, 'curve-style': 'bezier',
+        'label': 'data(label)', 'font-size': '9px', 'color': '#64748b',
+        'text-background-color': '#0f172a', 'text-background-opacity': 1,
+        'text-background-padding': '3px', 'text-wrap': 'wrap', 'text-max-width': '90px',
+        'edge-text-rotation': 'autorotate', 'overlay-padding': '8px',
+      }},
+      { selector: 'edge[?dashed]',   style: { 'line-style': 'dashed', 'line-dash-pattern': [6,4], 'line-color': '#475569', 'target-arrow-color': '#475569' } },
+      { selector: 'edge[?newEdge]',  style: { 'line-color': '#f43f5e', 'target-arrow-color': '#f43f5e', 'width': 2.5, 'color': '#f43f5e', 'z-index': 15 } },
+      { selector: 'edge.df-edge-hl', style: { 'line-color': '#38bdf8', 'target-arrow-color': '#38bdf8', 'width': 2.5, 'z-index': 20 } },
+    ],
+    wheelSensitivity: 0.3, minZoom: 0.1, maxZoom: 3,
+  });
+
+  cyDf.fit(undefined, 40);
+
+  // Auto-save positions
+  let dfSaveTimer = null;
+  cyDf.on('dragfree', 'node', function() {
+    clearTimeout(dfSaveTimer);
+    dfSaveTimer = setTimeout(function() {
+      const pos = {};
+      cyDf.nodes().forEach(n => { pos[n.id()] = { x: n.position('x'), y: n.position('y') }; });
+      localStorage.setItem(DF_STORAGE_KEY, JSON.stringify(pos));
+    }, 500);
+  });
+
+  // Click node → highlight + panel
+  cyDf.on('tap', 'node', function(evt) {
+    const id = evt.target.id();
+    cyDf.nodes().removeClass('df-hl');
+    cyDf.edges().removeClass('df-edge-hl');
+    evt.target.addClass('df-hl');
+    evt.target.connectedEdges().addClass('df-edge-hl');
+    const detail = currentLang === 'EN' ? (nodeDetailsEN[id]||nodeDetails[id]) : nodeDetails[id];
+    if (detail) {
+      const panel = document.getElementById('df-detail-panel');
+      const body  = document.getElementById('df-panel-body');
+      document.getElementById('df-panel-title').textContent = detail.title;
+      panel.classList.remove('collapsed');
+      const sc = detail.status === 'done' ? 'status-done' : 'status-todo';
+      const filesHtml = (detail.files||[]).map(f=>`<div class="file-item">${f}</div>`).join('');
+      const fnsHtml   = (detail.functions||[]).map(f=>`<span class="fn-item">${f}</span>`).join('');
+      body.innerHTML = `
+        <span class="status-badge ${sc}">✅ Done</span>
+        <div class="panel-desc">${detail.description||''}</div>
+        ${filesHtml?`<div class="panel-section-title">📁 Files</div><div class="file-list">${filesHtml}</div>`:''}
+        ${fnsHtml?`<div class="panel-section-title">⚡ Functions</div><div class="fn-list">${fnsHtml}</div>`:''}
+      `;
+    }
+  });
+
+  cyDf.on('tap', function(evt) {
+    if (evt.target === cyDf) {
+      document.getElementById('df-detail-panel').classList.add('collapsed');
+      cyDf.nodes().removeClass('df-hl');
+      cyDf.edges().removeClass('df-edge-hl');
+    }
+  });
+
+  // Edge tooltip
+  const tip = document.getElementById('edge-tooltip');
+  const ttL = document.getElementById('tt-label');
+  const ttB = document.getElementById('tt-body');
+  cyDf.on('mouseover', 'edge', function(evt) {
+    const d = evt.target.data();
+    ttL.textContent = d.label||''; ttL.style.color = d.newEdge ? '#f43f5e' : '#38bdf8';
+    ttB.textContent = d.tooltip||'';
+    tip.style.display = 'block';
+    evt.target.addClass('df-edge-hl');
+  });
+  cyDf.on('mousemove', 'edge', function(evt) {
+    const e = evt.originalEvent;
+    tip.style.left=(e.clientX+16)+'px'; tip.style.top=(e.clientY-10)+'px';
+  });
+  cyDf.on('mouseout', 'edge', function(evt) {
+    tip.style.display='none'; evt.target.removeClass('df-edge-hl');
+  });
+}
+
+function resetDfLayout() {
+  if (!cyDf) return;
+  localStorage.removeItem(DF_STORAGE_KEY);
+  cyDf.nodes().forEach(n => { const p = dfInitPositions[n.id()]; if(p) n.position(p); });
+  cyDf.fit(undefined, 40);
+}
+
+function changeDfEdgeFont(d) { dfEdgeFontSize = Math.min(20,Math.max(6,dfEdgeFontSize+d)); cyDf&&cyDf.edges().style('font-size',dfEdgeFontSize+'px'); }
+function changeDfNodeFont(d) { dfNodeFontSize = Math.min(20,Math.max(6,dfNodeFontSize+d)); cyDf&&cyDf.nodes().style('font-size',dfNodeFontSize+'px'); }
+
+// ── Language Toggle ───────────────────────────────────────────────
+let currentLang = 'VN';
+
+function toggleLang() {
+  currentLang = currentLang === 'VN' ? 'EN' : 'VN';
+  const btn = document.getElementById('lang-btn');
+  btn.textContent = currentLang === 'VN' ? '🌐 EN' : '🌐 VN';
+
+  // Update node labels in Cytoscape
+  if (cy) {
+    cy.nodes().forEach(node => {
+      const id = node.id();
+      const nd = nodesData.find(n => n.id === id);
+      if (nd) node.data('label', currentLang === 'VN' ? nd.label : (nd.labelEN || nd.label));
+    });
+    cy.edges().forEach(edge => {
+      const id = edge.id();
+      const ed = edgesData.find(e => e.id === id);
+      if (ed) {
+        edge.data('label', currentLang === 'VN' ? ed.label : (ed.labelEN || ed.label));
+        edge.data('tooltip', currentLang === 'VN' ? ed.tooltip : (ed.tooltipEN || ed.tooltip));
+      }
+    });
+  }
+
+  // Update node detail panel translations
+  nodeDetailsEN['photo'].description = 'Capture photo via camera input (capture=environment). Read file → FileReader base64 → save to IndexedDB "anh" store with sync_status=pending. Filename: YYYYMMDD_AufmaB_Floor_Room_001.jpg';
+
+  // Update panel if open
+  if (currentNodeId && nodeDetails[currentNodeId]) {
+    const detail = currentLang === 'VN' ? nodeDetails[currentNodeId] : (nodeDetailsEN[currentNodeId] || nodeDetails[currentNodeId]);
+    const label = currentLang === 'VN' ? (nodesData.find(n=>n.id===currentNodeId)||{}).label : (nodesData.find(n=>n.id===currentNodeId)||{}).labelEN;
+    showPanel(detail, label || currentNodeId, currentNodeId);
+  }
+}
+
+// English translations for node detail panel
+const nodeDetailsEN = {
+  's1': { title: '🏠 Screen 1 — Card List', status: 'done', files: ['index.html (line 142–150, 418–480)'], functions: ['renderS1()', 'openCard(card)', 'goS1()'], description: 'Main screen. Shows all Measurement Cards grouped by creation time. Each card = 1 room + 1 Gewerk. Displays real measurement totals (e.g. "7.2m Steel Pipe · 5 Elbow 90°"). FAB (+) creates new card.', prompt: 'Please read index.html from line 418 to 480 (renderS1, openCard). I want to modify/add a feature:' },
+  's2': { title: '📋 Screen 2 — Room Detail', status: 'done', files: ['index.html (line 152–167, 598–745)'], functions: ['renderS2()', 'saveAndSync()', 'capturePhoto()', 'goS1()'], description: 'Main data entry screen. Shows all Gewerks for the room, grouped by DN, with each item. +5/+1 buttons for quick entry. Save button to sync. Bottom bar: + Gewerk/DN and 📷 Photo.', prompt: 'Please read index.html from line 598 to 745 (renderS2). I want to modify/add a feature:' },
+  's3': { title: '🔍 Screen 3 — Material Selector', status: 'done', files: ['index.html (line 1079–1237)'], functions: ['goToS3()', 'renderS3()', 'toggleS3Mat()', 'confirmMaterials()', 'toggleAllS3()'], description: 'Material selection screen before creating a new DN. Shows all items for the Gewerk (from IndexedDB vat_lieu). Checkboxes to select/deselect. Halterung section at the bottom.', prompt: 'Please read index.html from line 1079 to 1237 (S3 Material Selector). I want to modify/add a feature:' },
+  'bs-newcard': { title: '➕ Bottom Sheet — New Card', status: 'done', files: ['index.html (line 169–260, 558–590)'], functions: ['createCard()', 'smartSearch()', 'initGewerkChips()', 'addPhong()'], description: 'Form to create a new Measurement Card. Enter Raum-Nr, Name, Floor — smart search autocomplete from room list. Multi-select Gewerk chips (Lüftung, Heizung, Kälte...). Each Gewerk creates a separate card.', prompt: 'Please read index.html from line 169 to 260 and createCard(). I want to modify/add a feature:' },
+  'bs-gew': { title: '⚙️ Bottom Sheet — Add Gewerk/DN', status: 'done', files: ['index.html (line 1023–1078)'], functions: ['openBsGew(gew, locked)', 'updateDNPresets()', 'goToS3()'], description: 'Bottom sheet to add a new DN to existing Gewerk. Select DN size from presets (DN50, DN80, DN100...) or enter manually. When Gewerk already selected (locked=true) shows fixed chip. Tap next → S3.', prompt: 'Please read index.html openBsGew() and updateDNPresets(). I want to modify/add a feature:' },
+  'bs-newmat': { title: '🆕 Bottom Sheet — Add New Item', status: 'done', files: ['index.html (line 950–1022)'], functions: ['openNewMatSheet(gew)', 'addNewMaterial()', 'updateNmInfo()'], description: 'Form to add new item to Gewerk from ··· context menu. Enter German name + select unit (Stk/m/m²). On confirm: creates IndexedDB records for ALL existing DNs of that Gewerk + calls serverAddMaterial() to write to WORK_ITEMS sheet.', prompt: 'Please read index.html openNewMatSheet() and addNewMaterial(). I want to modify/add a feature:' },
+  'ctx-menu': { title: '☰ Context Menu ···', status: 'done', files: ['index.html (line 88–94, 911–949)'], functions: ['showGewCtx(gew, btnEl)', 'gewDeleteMode{}'], description: 'Context menu shown when tapping ··· on Gewerk header. 4 actions: (1) Delete items — toggle delete mode showing × red per row; (2) Add new DN; (3) Add new item; (4) Duplicate. Replaces the old dangerous × button.', prompt: 'Please read index.html showGewCtx() and CSS #gewCtx. I want to modify/add a feature:' },
+  'indexeddb': { title: '🗄️ IndexedDB — AufmaBV3', status: 'done', files: ['index.html (line 371–390)'], functions: ['openDB()', 'dbPut()', 'dbGet()', 'dbGetAll()', 'dbIdx()'], description: 'Local database running in browser. 4 stores: rooms, materials (master), measurements (keyPath: local_id), photos (base64). Offline-first: all operations save here before syncing.', prompt: 'Please read index.html openDB() and dbPut/dbGet/dbGetAll functions. I want to change the schema or add a new store:' },
+  'render-s1': { title: '🔧 renderS1() — Build Card List', status: 'done', files: ['index.html (line 418–480)'], functions: ['renderS1()', 'updateBadge()'], description: 'Reads all dem_le from IndexedDB → groups by card_id → calculates real value totals per item name → renders each card with room name, Gewerk badge, DN list, material summary. Sorts by created_at DESC.', prompt: 'Please read renderS1() in index.html. I want to change how cards are displayed:' },
+  'render-s2': { title: '🔧 renderS2() — Build Detail View', status: 'done', files: ['index.html (line 598–745)'], functions: ['renderS2()', 'buildMR(rec)', 'openBsGew()', 'showGewCtx()'], description: 'Reads dem_le filtered by ma_phong + nhom from IndexedDB → groups by nhom (Gewerk) → groups by grosse (DN) → renders each item row via buildMR(). Preserves collapse/open state for each Gewerk and DN.', prompt: 'Please read renderS2() in index.html. I want to change how the detail view is displayed:' },
+  'build-mr': { title: '🔧 buildMR() — Material Row', status: 'done', files: ['index.html (line 746–853)'], functions: ['buildMR(rec)', 'tapVal()', 'pVal()', 'saveHeSo()', 'editTk()', 'addSeg()'], description: '⭐ God Node of the frontend! Builds each item row: name label, total display box (mr-box), +5/+1/factor buttons, custom formula input, × delete button. Inline event handlers for real-time update without re-render.', prompt: 'Please read buildMR() in index.html. I want to modify the UI/logic of the material row:' },
+  'sync': { title: '🔄 Sync Engine — saveAndSync()', status: 'done', files: ['index.html (line 1251–1410)'], functions: ['saveAndSync()', 'doSync()', 'gsRun()', 'updateBadge()'], description: 'saveAndSync(): reads pending records → pushes to GAS → uploads photos. doSync(): pulls rooms + materials from GAS on first run. gsRun(): wrapper for google.script.run (IS_GAS) with mock fallback for local testing.', prompt: 'Please read saveAndSync() and doSync() in index.html. I want to modify the sync logic:' },
+  'excel': { title: '📊 Excel Export — exportExcel()', status: 'done', files: ['index.html (line 1419–1530)'], functions: ['exportExcel()', 'buildXLSXBytes()', 'buildZip()'], description: 'Inline XLSX writer (no CDN, works offline). Reads all dem_le from IndexedDB → skips records with total=0 → sorts by floor→room→group→DN → exports AufmaB_YYYYMMDD.xlsx. Columns: Floor, Room-No, Room Name, Gewerk, DN/Group, Item, Unit, Total.', prompt: 'Please read exportExcel() and buildXLSXBytes() in index.html. I want to improve Excel export:' },
+  'photo': { title: '📷 Photo Capture', status: 'done', files: ['index.html (line 1238–1250)'], functions: ['capturePhoto(event)', 'makePhotoFilename()'], description: 'Capture photo via camera input (capture=environment). Read file → FileReader base64 → save to IndexedDB "anh" store with sync_status=pending. Filename format: YYYYMMDD_AufmaB_Floor_Room_001.jpg', prompt: 'Please read capturePhoto() in index.html. I want to improve photo handling:' },
+  'gas-entry': { title: '⚡ GAS — doGet() Entry Point', status: 'done', files: ['Code.gs (line 16–24)'], functions: ['doGet(e)', 'IS_GAS flag'], description: 'GAS WebApp entry point. doGet() returns index.html. IS_GAS = typeof google !== undefined — used to distinguish running on real GAS vs local preview. Fixed deployment ID to avoid creating new deployments on redeploy.', prompt: 'Please read Code.gs from line 1 to 30. I want to modify GAS configuration:' },
+  'server-pull': { title: '📥 serverPull() — Read Sheets', status: 'done', files: ['Code.gs (line 25–87)'], functions: ['serverPull()', 'inferUnit(name)'], description: 'Reads ROOMS sheet (room list) and WORK_ITEMS sheet (master items). WORK_ITEMS vertical format: col A=ID, B=STT, C=Gewerk, D=item_name, E=unit, F=calc_type. inferUnit() auto-infers unit/calc_type from item name if cols E/F empty.', prompt: 'Please read serverPull() and inferUnit() in Code.gs. I want to modify the sheet reading logic:' },
+  'server-push': { title: '📤 serverPush() — Write bsGew', status: 'done', files: ['Code.gs (line 140–200)'], functions: ['serverPush()', 'writeDemLe()', 'writeVatLieuNew()', 'writePhongNew()'], description: 'Receives JSON from app → writes dem_le to bsGew sheet (each record = 1 row). writeDemLe() calculates total from values[]. Returns mapped_ids for app to update sync_status. Also handles new materials and new rooms.', prompt: 'Please read serverPush() and writeDemLe() in Code.gs. I want to modify the data format written to the sheet:' },
+  'server-upload': { title: '🖼️ serverUploadImage() — Drive', status: 'done', files: ['Code.gs (line 162–197)'], functions: ['serverUploadImage()', 'getOrCreateSubfolder()'], description: 'Uploads base64 image to Google Drive. getOrCreateSubfolder(): creates folder per room name if not exists. Saved as JPEG. Returns drive_url for app to save in IndexedDB.', prompt: 'Please read serverUploadImage() in Code.gs. I want to improve how photos are saved to Drive:' },
+  'server-addmat': { title: '➕ serverAddMaterial() — WORK_ITEMS', status: 'done', files: ['Code.gs (line 88–139)'], functions: ['serverAddMaterial()'], description: 'Adds new item to WORK_ITEMS sheet. Finds last row of same Gewerk → insertRowAfter() → writes (auto ID, STT, group, item_name, unit, calc_type). Maintains vertical format, does not break sheet structure.', prompt: 'Please read serverAddMaterial() in Code.gs. I want to modify the add-item logic:' },
+  'idb-local': { title: '💾 IndexedDB Stores', status: 'done', files: ['index.html (line 373–385)'], functions: ['openDB() — upgrade handler'], description: '4 stores: rooms (keyPath: id), materials (keyPath: ma_vl, index: nhom), measurements (keyPath: local_id, indexes: ma_phong, sync_status), photos (keyPath: anh_id, index: ma_phong). DB name: AufmaBV3, version 1.', prompt: 'Please read openDB() in index.html (line 373–385). I want to add a store or change the schema:' },
+  'sheets-cong': { title: '📊 WORK_ITEMS Sheet', status: 'done', files: ['Code.gs', 'Google Sheets'], functions: ['serverPull() reads', 'serverAddMaterial() writes'], description: 'Master item list. Vertical format: A=ID, B=STT, C=Gewerk, D=item_name, E=unit, F=calc_type. FIXED structure — do not change layout. Gewerks: Heizung, Kälte, Befestigung/Halterung, Lüftung...', prompt: 'WORK_ITEMS sheet in Google Sheets. Google Sheet ID: 1Q9AQdT6K8zxsKUMk1mzm5JS1tgBXi_BbV45BpoP7aTM' },
+  'sheets-phong': { title: '🏢 ROOMS Sheet', status: 'done', files: ['Code.gs — serverPull()'], functions: ['serverPull() reads', 'writePhongNew() writes'], description: 'Room/zone list. Cols: id, room_no, room_name, floor, zone. Read on first sync → saved to IndexedDB "rooms". New rooms created in app are written back to sheet on Save.', prompt: 'ROOMS sheet in Google Sheets. Google Sheet ID: 1Q9AQdT6K8zxsKUMk1mzm5JS1tgBXi_BbV45BpoP7aTM' },
+  'sheets-bsgew': { title: '📝 bsGew Sheet', status: 'done', files: ['Code.gs — writeDemLe()'], functions: ['writeDemLe()', 'serverPush()'], description: 'Sheet containing actual measurement data. Each row = 1 item for 1 room. Cols: local_id, room_no, floor, group, size, item_name, total, unit, calc_type, factor, sheet_id. This is the main output of the app.', prompt: 'bsGew sheet in Google Sheets. Google Sheet ID: 1Q9AQdT6K8zxsKUMk1mzm5JS1tgBXi_BbV45BpoP7aTM' },
+  'drive': { title: '📁 Google Drive', status: 'done', files: ['Code.gs — serverUploadImage()'], functions: ['getOrCreateSubfolder()', 'DriveApp.getFolderById()'], description: 'Stores site photos. Folder ID: 1W1aM9cSVX2u1PXtjEhPN0OxC4329OE1u. Auto-creates subfolder per room name. Files saved as JPEG. Returned URL saved in IndexedDB for later display.', prompt: 'Please read serverUploadImage() in Code.gs. Google Drive Folder ID: 1W1aM9cSVX2u1PXtjEhPN0OxC4329OE1u' },
+};
+
+// ── Multi-Select ─────────────────────────────────────────────────
+let selectedNodes = new Set();
+
+function updateMultiSelectUI() {
+  const count = selectedNodes.size;
+  const hint  = document.getElementById('multiselect-hint');
+  const tip   = document.getElementById('multiselect-tip');
+  document.getElementById('multiselect-count').textContent = count;
+  hint.style.display = count > 0 ? 'inline-flex' : 'none';
+  tip.style.display  = count > 0 ? 'none' : 'inline';
+  // highlight
+  if (cy) cy.nodes().forEach(n => {
+    if (selectedNodes.has(n.id())) n.addClass('highlighted-node');
+    else if (!n.hasClass('highlighted-node') || selectedNodes.size > 0) n.removeClass('highlighted-node');
+  });
+}
+
+function clearMultiSelect() {
+  selectedNodes.clear();
+  if (cy) cy.nodes().removeClass('highlighted-node');
+  updateMultiSelectUI();
+  document.getElementById('multiselect-panel').style.display = 'none';
+}
+
+function askMultiSelect() {
+  if (selectedNodes.size === 0) return;
+  const panel = document.getElementById('multiselect-panel');
+  panel.style.display = 'flex';
+  // Render chips
+  const chips = document.getElementById('ms-selected-chips');
+  chips.innerHTML = [...selectedNodes].map(id => {
+    const nd = nodesData.find(n => n.id === id);
+    const label = (currentLang === 'EN' && nd && nd.labelEN ? nd.labelEN : (nd ? nd.label : id)).replace(/\n/g,' ');
+    const col = groupColors[(nodesData.find(n=>n.id===id)||{}).group] || '#475569';
+    return `<span style="font-size:10px;padding:2px 8px;border-radius:99px;background:${col}22;border:1px solid ${col};color:${col}">${label}</span>`;
+  }).join('');
+  document.getElementById('ms-panel-title').textContent = `🤖 ${selectedNodes.size} blocks đã chọn`;
+  // Auto-send initial question
+  const msgs = document.getElementById('ms-messages');
+  if (msgs.children.length === 0) {
+    const names = [...selectedNodes].map(id => {
+      const nd = currentLang === 'EN' ? (nodeDetailsEN[id]||nodeDetails[id]) : nodeDetails[id];
+      return nd ? nd.title : id;
+    });
+    const autoQ = `Giải thích ngắn gọn ${names.length} blocks này là gì và chúng liên quan với nhau như thế nào: ${names.join(', ')}`;
+    sendMultiChatMsg(autoQ, true);
+  }
+}
+
+function addMsMsg(role, text) {
+  const msgs = document.getElementById('ms-messages');
+  if (!msgs) return;
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + role;
+  div.style.fontSize = '12px';
+  div.textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+async function sendMultiChatMsg(prompt, isAuto) {
+  const btn = document.querySelector('#multiselect-panel button:last-of-type');
+  if (!isAuto) addMsMsg('user', prompt);
+  if (btn) btn.disabled = true;
+  const think = document.createElement('div');
+  think.className = 'chat-msg thinking'; think.textContent = '⏳ Gemini đang phân tích...';
+  think.style.fontSize = '12px';
+  document.getElementById('ms-messages').appendChild(think);
+
+  const context = [...selectedNodes].map(id => {
+    const d = currentLang === 'EN' ? (nodeDetailsEN[id]||nodeDetails[id]) : nodeDetails[id];
+    if (!d) return `- ${id}`;
+    return `- ${d.title}: ${d.description}\n  Files: ${(d.files||[]).join(', ')}\n  Functions: ${(d.functions||[]).join(', ')}`;
+  }).join('\n');
+
+  const fullPrompt = `Dự án AufmaB Beta: app nhập liệu MEP tại công trường Đức. 1 file HTML + Google Apps Script backend. Offline-first trên iPad.\n\nCác blocks được chọn:\n${context}\n\nCâu hỏi: ${prompt}\n\nTrả lời ngắn gọn, rõ ràng, đúng trọng tâm.`;
+
+  try {
+    const reply = await callGemini(fullPrompt, 600);
+    think.remove();
+    addMsMsg('ai', reply.text || reply);
+  } catch(e) {
+    think.remove();
+    addMsMsg('ai', '❌ Lỗi: ' + e.message);
+  }
+  if (btn) btn.disabled = false;
+}
+
+function sendMultiChat() {
+  const inp = document.getElementById('ms-input');
+  const text = inp.value.trim();
+  if (!text) return;
+  addMsMsg('user', text);
+  inp.value = '';
+  sendMultiChatMsg(text, false);
+}
+
+// Hook multi-select vào Cytoscape (gọi sau initCytoscape)
+function initMultiSelect() {
+  cy.on('tap', 'node', function(evt) {
+    const id = evt.target.id();
+    const isModifier = evt.originalEvent && (evt.originalEvent.ctrlKey || evt.originalEvent.metaKey || evt.originalEvent.shiftKey);
+    if (isModifier) {
+      // Ctrl/Shift+click: toggle selection
+      if (selectedNodes.has(id)) { selectedNodes.delete(id); evt.target.removeClass('highlighted-node'); }
+      else { selectedNodes.add(id); evt.target.addClass('highlighted-node'); }
+      cy.edges().removeClass('highlighted');
+      updateMultiSelectUI();
+      if (selectedNodes.size > 1) closePanel();
+    } else if (selectedNodes.size > 1) {
+      // Click thường khi đang multi-select → về single
+      cy.nodes().removeClass('highlighted-node');
+      cy.edges().removeClass('highlighted');
+      selectedNodes.clear();
+      updateMultiSelectUI();
+      document.getElementById('multiselect-panel').style.display = 'none';
+      document.getElementById('ms-messages').innerHTML = '';
+    }
+  });
+
+  // Box select (Ctrl+drag) → add all selected nodes
+  cy.on('boxselect', 'node', function(evt) {
+    selectedNodes.add(evt.target.id());
+    evt.target.addClass('highlighted-node');
+  });
+  cy.on('boxend', function() {
+    updateMultiSelectUI();
+    if (selectedNodes.size > 1) closePanel();
+  });
+}
+
+// ── Code Overview (8 nodes / 4 layers) ───────────────────────────
+let cyOverview = null;
+
+const overviewNodes = [
+  // sf = which source file owns this block
+  { id:'ov-screens',  label:'📱 UI Screens\nS1 · S2 · S3\n[ index.html ]',              group:'screen',  sf:'index.html', desc:'3 màn hình chính: S1 (Card List), S2 (Room Detail nhập liệu), S3 (Material Selector). Điều hướng qua showScreen(). Toàn bộ UI trong 1 file index.html.' },
+  { id:'ov-forms',    label:'⚙️ Forms & Menus\nBS · Context Menu\n[ index.html ]',       group:'sheet',   sf:'index.html', desc:'4 Bottom Sheets (Tạo bìa mới, Thêm Gewerk/DN, Thêm cấu kiện, BS Halterung) + Context Menu ···. Hiện lên overlay khi user tương tác, đóng sau khi xác nhận.' },
+  { id:'ov-render',   label:'🔧 Render Engine\nrenderS1/S2 · buildMR\n[ index.html ]',   group:'logic',   sf:'index.html', desc:'renderS1() và renderS2() build lại DOM từ IndexedDB. buildMR() là God Node — tạo từng dòng cấu kiện với +5/+1, công thức, hệ số. Không re-render toàn bộ — update DOM tại chỗ.' },
+  { id:'ov-idb',      label:'🗄️ IndexedDB\n4 stores offline\n[ index.html ]',            group:'data',    sf:'index.html', desc:'Offline-first local database. 4 stores: phong, vat_lieu, dem_le (dữ liệu đo chính), anh (ảnh base64). Mọi thao tác lưu đây trước — sync lên cloud sau.' },
+  { id:'ov-output',   label:'📤 Output\nExcel · Photo · Sync\n[ index.html ]',            group:'output',  sf:'index.html', desc:'3 loại output: (1) Excel inline XLSX download, (2) Photo capture → base64 → IndexedDB, (3) saveAndSync() push data + ảnh lên GAS. Đều chạy offline-capable.' },
+  { id:'ov-gas',      label:'⚡ GAS Backend\n[ Code.gs ]',                                group:'gas',     sf:'Code.gs',    desc:'Google Apps Script WebApp. 5 functions: serverPull (đọc sheets), serverPush (ghi dem_le), serverUploadImage (Drive), serverAddMaterial (CONG_VIEC), doGet (serve HTML). Gọi qua google.script.run.' },
+  { id:'ov-sheets',   label:'📊 Google Sheets\nPHONG · CONG_VIEC · bsGew\n[ Google ]',   group:'storage', sf:'Google',     desc:'3 sheets: PHONG (danh sách phòng), CONG_VIEC (master cấu kiện, format dọc), bsGew (output đo đạc thực tế — mỗi row = 1 cấu kiện). Sheet ID cố định.' },
+  { id:'ov-drive',    label:'📁 Google Drive\nPhoto Storage\n[ Google ]',                 group:'storage', sf:'Google',     desc:'Lưu ảnh công trường. Tự tạo subfolder theo tên phòng. File JPEG. URL trả về lưu vào IndexedDB. Folder ID: 1W1aM9cSVX2u1PXtjEhPN0OxC4329OE1u.' },
+];
+
+const overviewPositions = {
+  'ov-screens': { x: 300, y: 80  },
+  'ov-forms':   { x: 700, y: 80  },
+  'ov-render':  { x: 300, y: 240 },
+  'ov-idb':     { x: 700, y: 240 },
+  'ov-output':  { x: 500, y: 400 },
+  'ov-gas':     { x: 500, y: 560 },
+  'ov-sheets':  { x: 250, y: 700 },
+  'ov-drive':   { x: 750, y: 700 },
+};
+
+const overviewEdges = [
+  { id:'oe1', source:'ov-screens', target:'ov-forms',   label:'open sheets',  tooltip:'Screens mở Bottom Sheets và Context Menu để thêm/xóa Gewerk, DN, cấu kiện' },
+  { id:'oe2', source:'ov-screens', target:'ov-render',  label:'trigger render',tooltip:'Mỗi action (openCard, goS1, createCard) đều gọi renderS1() hoặc renderS2()' },
+  { id:'oe3', source:'ov-forms',   target:'ov-render',  label:'confirm → re-render', tooltip:'Sau khi confirm form (tạo bìa, thêm DN...) → renderS2() hoặc renderS1() rebuild DOM' },
+  { id:'oe4', source:'ov-render',  target:'ov-idb',     label:'read/write',   tooltip:'renderS1/S2 đọc IndexedDB. buildMR tạo handlers ghi values[] vào dem_le ngay khi tap +1/+5' },
+  { id:'oe5', source:'ov-forms',   target:'ov-idb',     label:'create records',tooltip:'confirmMaterials(), addNewMaterial() tạo dem_le records mới trong IndexedDB' },
+  { id:'oe6', source:'ov-screens', target:'ov-output',  label:'Save / Export',tooltip:'Bấm 💾 Save → saveAndSync(). Bấm 📊XL → exportExcel(). Bấm 📷 → capturePhoto()' },
+  { id:'oe7', source:'ov-idb',     target:'ov-output',  label:'source data',  tooltip:'exportExcel() và saveAndSync() đọc IndexedDB để lấy data. capturePhoto() ghi vào IndexedDB.' },
+  { id:'oe8', source:'ov-output',  target:'ov-gas',     label:'gsRun()',       tooltip:'saveAndSync() gọi google.script.run.serverPush() và serverUploadImage() qua gsRun() wrapper' },
+  { id:'oe9', source:'ov-gas',     target:'ov-idb',     label:'initial pull', tooltip:'doSync() khi khởi động: gsRun(serverPull) → lấy phong + vat_lieu → lưu vào IndexedDB', dashed:true },
+  { id:'oe10',source:'ov-gas',     target:'ov-sheets',  label:'read/write',   tooltip:'serverPull đọc PHONG + CONG_VIEC. serverPush ghi vào bsGew. serverAddMaterial ghi CONG_VIEC.' },
+  { id:'oe11',source:'ov-gas',     target:'ov-drive',   label:'upload JPEG',  tooltip:'serverUploadImage() decode base64 → tạo subfolder phòng → lưu file JPEG → trả drive_url' },
+];
+
+function initOverview() {
+  const els = [];
+  overviewNodes.forEach(n => els.push({ data: { id: n.id, label: n.label, group: n.group, desc: n.desc, sf: n.sf }, position: overviewPositions[n.id] }));
+  overviewEdges.forEach(e => els.push({ data: { id: e.id, source: e.source, target: e.target, label: e.label, tooltip: e.tooltip, dashed: !!e.dashed } }));
+
+  cyOverview = cytoscape({
+    container: document.getElementById('cy-overview'),
+    elements: els,
+    layout: { name: 'preset' },
+    style: [
+      { selector: 'node', style: {
+        'shape': 'roundrectangle', 'width': 'label', 'height': 'label', 'padding': '20px',
+        'background-color': ele => groupColors[ele.data('group')] || '#475569',
+        'background-opacity': 0.2,
+        'border-color': ele => groupColors[ele.data('group')] || '#475569',
+        'border-width': 2.5, 'label': 'data(label)',
+        'text-valign': 'center', 'text-halign': 'center',
+        'color': '#f1f5f9', 'font-size': '13px',
+        'font-family': 'Segoe UI, system-ui, sans-serif', 'font-weight': '700',
+        'text-wrap': 'wrap', 'text-max-width': '160px', 'z-index': 10,
+      }},
+      { selector: 'node:selected', style: { 'border-width': 4, 'background-opacity': 0.5 } },
+      { selector: 'edge', style: {
+        'width': 2, 'line-color': '#475569', 'target-arrow-color': '#64748b',
+        'target-arrow-shape': 'triangle', 'curve-style': 'bezier',
+        'label': 'data(label)', 'font-size': '11px', 'color': '#64748b',
+        'text-background-color': '#0f172a', 'text-background-opacity': 1,
+        'text-background-padding': '3px', 'text-wrap': 'wrap', 'text-max-width': '100px',
+        'edge-text-rotation': 'autorotate',
+      }},
+      { selector: 'edge[?dashed]', style: { 'line-style': 'dashed', 'line-dash-pattern': [8, 5], 'line-color': '#334155' } },
+      { selector: 'edge.ov-hl', style: { 'line-color': '#38bdf8', 'target-arrow-color': '#38bdf8', 'width': 3, 'z-index': 20 } },
+      { selector: 'node.ov-hl-node', style: { 'border-width': 4, 'background-opacity': 0.5, 'border-color': '#f8fafc', 'z-index': 20 } },
+    ],
+    wheelSensitivity: 0.3, minZoom: 0.2, maxZoom: 3,
+  });
+
+  cyOverview.fit(undefined, 60);
+
+  const ovPanel = document.getElementById('overview-detail-panel');
+  const ovTitle = document.getElementById('overview-panel-title');
+  const ovBody2 = document.getElementById('overview-panel-body');
+  const ovTip   = document.getElementById('edge-tooltip');
+  const ttLabel = document.getElementById('tt-label');
+  const ttBody  = document.getElementById('tt-body');
+
+  cyOverview.on('tap', 'node', function(evt) {
+    const d = evt.target.data();
+    const col = groupColors[d.group] || '#475569';
+    // Highlight node + edges
+    cyOverview.nodes().removeClass('ov-hl-node');
+    cyOverview.edges().removeClass('ov-hl');
+    evt.target.addClass('ov-hl-node');
+    evt.target.connectedEdges().addClass('ov-hl');
+    // Show detail panel
+    ovTitle.textContent = d.label.replace(/\n/g,' ');
+    ovPanel.classList.remove('collapsed');
+    const sfCol = sfColors[d.sf] || '#94a3b8';
+    ovBody2.innerHTML = `
+      <span class="status-badge status-done" style="border-left:3px solid ${col}">✅ Done</span>
+      <div class="panel-desc" style="margin-top:8px">${d.desc || ''}</div>
+      <div class="panel-section-title" style="margin-top:16px">📦 Thuộc layer</div>
+      <div style="display:inline-flex;align-items:center;gap:6px;margin-top:4px">
+        <div class="legend-dot" style="background:${col};width:12px;height:12px;border-radius:3px"></div>
+        <span style="font-size:12px;color:${col};font-weight:600">${d.group}</span>
+      </div>
+      <div class="panel-section-title" style="margin-top:16px">📄 Source file</div>
+      <div style="font-size:12px;color:${sfCol};font-weight:700;font-family:monospace;background:#0f172a;padding:5px 10px;border-radius:5px;border:1px solid ${sfCol}55;margin-top:4px;display:inline-block">${d.sf || '—'}</div>
+    `;
+  });
+
+  cyOverview.on('tap', function(evt) {
+    if (evt.target === cyOverview) {
+      ovPanel.classList.add('collapsed');
+      cyOverview.nodes().removeClass('ov-hl-node');
+      cyOverview.edges().removeClass('ov-hl');
+    }
+  });
+
+  // Edge hover tooltip
+  cyOverview.on('mouseover', 'edge', function(evt) {
+    const d = evt.target.data();
+    ttLabel.textContent = d.label || ''; ttLabel.style.color = '#38bdf8';
+    ttBody.textContent  = d.tooltip || '';
+    const pos = evt.originalEvent;
+    ovTip.style.transform = '';
+    ovTip.style.left = (pos.clientX + 16) + 'px'; ovTip.style.top = (pos.clientY - 10) + 'px';
+    ovTip.style.display = 'block';
+    evt.target.addClass('ov-hl');
+  });
+  cyOverview.on('mousemove', 'edge', function(evt) {
+    const pos = evt.originalEvent;
+    ovTip.style.left = (pos.clientX + 16) + 'px'; ovTip.style.top = (pos.clientY - 10) + 'px';
+  });
+  cyOverview.on('mouseout', 'edge', function(evt) { ovTip.style.display = 'none'; evt.target.removeClass('ov-hl'); });
+}
+
+// ── File Source Filter ────────────────────────────────────────────
+// Click a file button → dim all nodes NOT from that file (toggle off to reset)
+let activeSF = null, activeDfSF = null, activeOvSF = null;
+
+function _applyFilter(cyInst, sf, btnSel) {
+  document.querySelectorAll(btnSel).forEach(b =>
+    b.classList.toggle('active', !!sf && b.dataset.sf === sf)
+  );
+  if (!cyInst) return;
+  if (!sf) {
+    cyInst.nodes().style('opacity', 1);
+    cyInst.edges().style('opacity', 1);
+  } else {
+    cyInst.nodes().forEach(n =>
+      n.style('opacity', n.data('sf') === sf ? 1 : 0.1)
+    );
+    cyInst.edges().forEach(e => {
+      const ok = e.source().data('sf') === sf || e.target().data('sf') === sf;
+      e.style('opacity', ok ? 0.65 : 0.05);
+    });
+  }
+}
+
+function filterBySF(sf) {
+  activeSF = activeSF === sf ? null : sf;
+  _applyFilter(cy,         activeSF,   '#tab-graph .sf-filter-btn');
+  renderFilesPanel();
+}
+function filterDfBySF(sf) {
+  activeDfSF = activeDfSF === sf ? null : sf;
+  _applyFilter(cyDf,       activeDfSF, '#tab-dataflow .sf-filter-btn');
+}
+function filterOvBySF(sf) {
+  activeOvSF = activeOvSF === sf ? null : sf;
+  _applyFilter(cyOverview, activeOvSF, '#tab-overview .sf-filter-btn');
+}
+
+// ── Files Panel data ───────────────────────────────────────────────
+// Toàn bộ file code trong dự án — kể cả file không xuất hiện trong sơ đồ
+const filesInfo = [
+  {
+    sf: 'index.html',
+    lines: 2476,
+    color: '#38bdf8',
+    role: 'Toàn bộ frontend: UI Screens, Bottom Sheets, logic render, IndexedDB offline, Excel export, photo capture. Chạy trực tiếp trên browser/iPad — không cần build tool.',
+    nodes: [
+      { label: '🏠 S1 — Bìa List',        group: 'screen'  },
+      { label: '📋 S2 — Phòng Detail',     group: 'screen'  },
+      { label: '🔍 S3 — Material Selector',group: 'screen'  },
+      { label: '➕ BS Tạo Bìa Mới',        group: 'sheet'   },
+      { label: '⚙️ BS Gewerk / DN',        group: 'sheet'   },
+      { label: '☰ Context Menu ···',       group: 'sheet'   },
+      { label: '🆕 BS Thêm Cấu Kiện',      group: 'sheet'   },
+      { label: '🔧 renderS1()',            group: 'logic'   },
+      { label: '🔧 renderS2()',            group: 'logic'   },
+      { label: '🔧 buildMR() ⭐',          group: 'logic'   },
+      { label: '🔄 saveAndSync()',         group: 'logic'   },
+      { label: '🗄️ IndexedDB AufmaBV3',   group: 'data'    },
+      { label: '💾 4 Stores (dem_le...)',  group: 'data'    },
+      { label: '📊 Excel Export (XLSX)',   group: 'output'  },
+      { label: '📷 Photo Capture',         group: 'output'  },
+    ]
+  },
+  {
+    sf: 'Code.gs',
+    lines: 468,
+    color: '#eab308',
+    role: 'Google Apps Script WebApp backend: nhận request từ frontend, đọc/ghi Google Sheets, upload ảnh lên Drive. Deploy dưới dạng Web App URL.',
+    nodes: [
+      { label: '⚡ doGet() — WebApp Entry', group: 'gas' },
+      { label: '📥 serverPull()',           group: 'gas' },
+      { label: '📤 serverPush()',           group: 'gas' },
+      { label: '🖼️ serverUploadImage()',   group: 'gas' },
+      { label: '➕ serverAddMaterial()',    group: 'gas' },
+    ]
+  },
+  {
+    sf: null,
+    fileName: 'server.js',
+    lines: 37,
+    color: '#64748b',
+    tag: 'dev only',
+    role: 'Dev server local — chỉ chạy trên máy tính khi phát triển. Serve file tĩnh tại port 62608. Không được deploy lên production.',
+    nodes: []
+  },
+  {
+    sf: null,
+    fileName: 'appsscript.json',
+    lines: 9,
+    color: '#64748b',
+    tag: 'config',
+    role: 'GAS config — khai báo OAuth scopes (Sheets, Drive), timezone Asia/Ho_Chi_Minh, webapp access. File cấu hình thuần túy, không chứa logic.',
+    nodes: []
+  },
+];
+
+// Màu theo group (dùng để tô chip)
+const groupChipColors = {
+  screen: '#0ea5e9', sheet: '#8b5cf6', logic: '#10b981',
+  data: '#f97316', gas: '#eab308', output: '#ec4899', storage: '#6b7280',
+};
+
+// expanded state per card index
+const fpExpanded = new Set();
+
+function toggleFP(idx) {
+  fpExpanded.has(idx) ? fpExpanded.delete(idx) : fpExpanded.add(idx);
+  renderFilesPanel();
+}
+
+function renderFilesPanel() {
+  const body = document.getElementById('files-panel-body');
+  if (!body) return;
+
+  body.innerHTML = filesInfo.map((f, idx) => {
+    const name     = f.sf || f.fileName;
+    const isActive = !!(activeSF && activeSF === f.sf);
+    const isOpen   = fpExpanded.has(idx);
+    const hasNodes = f.nodes.length > 0;
+
+    // count badge
+    const countBadge = hasNodes
+      ? `<span class="fp-h-count" style="color:${f.color};background:${f.color}22">${f.nodes.length} blocks</span>`
+      : `<span class="fp-h-count" style="color:#475569;background:#0f172a;border:1px dashed #334155">0 blocks</span>`;
+
+    // chips in body
+    const chipsHtml = hasNodes
+      ? f.nodes.map(n => {
+          const gc = groupChipColors[n.group] || '#64748b';
+          return `<span class="fp-chip" style="color:${gc};border-color:${gc}44;background:${gc}14">${n.label}</span>`;
+        }).join('')
+      : `<span class="fp-no-nodes">Không xuất hiện trong sơ đồ</span>`;
+
+    return `<div class="fp-item" style="--fpc:${f.color}">
+  <div class="fp-header${isActive ? ' fp-h-active' : ''}">
+    <div class="fp-h-left${f.sf ? ' fp-clickable' : ''}"
+         ${f.sf ? `onclick="filterBySF('${f.sf}')"` : ''}
+         title="${f.sf ? 'Click để lọc sơ đồ' : ''}">
+      <span class="fp-h-name" style="color:${f.color}">${name}</span>
+      <span class="fp-h-lines">${f.lines} lines</span>
+      ${f.tag ? `<span class="fp-h-tag">${f.tag}</span>` : ''}
+      ${countBadge}
+    </div>
+    <button class="fp-arrow${isOpen ? ' open' : ''}" onclick="toggleFP(${idx})"
+            title="${isOpen ? 'Thu gọn' : 'Xem chi tiết'}">
+      <span class="fp-chevron">▼</span>
+    </button>
+  </div>
+  <div class="fp-body${isOpen ? ' open' : ''}">
+    <div class="fp-card-role">${f.role}</div>
+    <div class="fp-section-title">${hasNodes ? `${f.nodes.length} blocks trong sơ đồ` : 'Không có block nào'}</div>
+    <div class="fp-chips">${chipsHtml}</div>
+  </div>
+</div>`;
+  }).join('');
+}
+
+// ── Boot ──────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({
+    startOnLoad: false, theme: 'dark',
+    themeVariables: {
+      background: '#0f172a', primaryColor: '#1e293b', primaryTextColor: '#e2e8f0',
+      primaryBorderColor: '#334155', lineColor: '#475569', secondaryColor: '#263348',
+      tertiaryColor: '#1e293b', fontSize: '13px', fontFamily: 'Segoe UI, system-ui, sans-serif',
+    },
+    sequence: { useMaxWidth: false, actorMargin: 60, mirrorActors: false }
+  });
+  mermaid.run({ querySelector: '.mermaid' });
+  setTimeout(() => { initCytoscape(); initMultiSelect(); renderFilesPanel(); }, 100);
+});
+</script>
+</body>
+</html>

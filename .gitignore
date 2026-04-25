@@ -1,0 +1,16 @@
+# Private / generated — không commit
+memory_bank/
+.claude/
+.gitnexus/
+graphify-out/
+
+# Clasp credentials (chứa scriptId riêng tư)
+.clasp.json
+.claspignore
+
+# VibeYard artifact (bị kẹt do Windows path colon)
+*vibeyard*/
+C\:*/
+
+# Node
+node_modules/
