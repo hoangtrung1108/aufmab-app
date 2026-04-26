@@ -1,6 +1,15 @@
 // AufmaB Beta — IndexedDB helpers + UI utilities
 // Depends on: config.js
 
+// ---- evalVal: evaluate a value that may be a number or expression string ----
+// Used by render.js (display total) and sync.js (comparison)
+function evalVal(v){
+  if(typeof v==='number')return v;
+  var c=String(v).replace(/[^0-9+\-*/().\s]/g,'');
+  if(!c.trim())return 0;
+  try{var r=Function('"use strict";return('+c+')')();return(isFinite(r)&&r>=0)?r:0;}catch(e){return 0;}
+}
+
 // ---- IndexedDB ----
 function openDB(){
   return new Promise(function(ok,fail){

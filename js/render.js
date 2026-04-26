@@ -530,31 +530,48 @@ function buildMR(rec){
       // Nếu focus() nằm trong .then() callback → iOS Safari không bật keyboard
       var inp=document.createElement('input');inp.type='text';inp.className='mr-box-inp';
       inp.placeholder=isDec?'3.5*2 / 2.5+1.8':'5+3*2 / (1+2)';
-      inp.setAttribute('inputmode','decimal'); // 'decimal' cho số + dấu chấm, user có thể switch sang full KB
+      inp.setAttribute('inputmode','decimal'); // numeric keyboard; operators via button row below
       box.appendChild(inp);
+
+      // Operator button row — hiện trên mọi thiết bị, đặc biệt hữu ích trên mobile
+      var opRow=document.createElement('div');opRow.className='mr-op-row';
+      ['(',')','×','÷','+','-'].forEach(function(op){
+        var btn=document.createElement('button');btn.type='button';btn.className='mr-op-btn';
+        btn.textContent=op;
+        btn.onmousedown=function(e){
+          e.preventDefault(); // không blur input
+          var char=op==='×'?'*':op==='÷'?'/':op;
+          var s=inp.selectionStart,en=inp.selectionEnd;
+          inp.value=inp.value.slice(0,s)+char+inp.value.slice(en);
+          inp.setSelectionRange(s+1,s+1);inp.focus();
+        };
+        opRow.appendChild(btn);
+      });
+      box.appendChild(opRow);
+
       inp.focus(); // phải synchronous — iOS kiểm tra gesture chain
       // Sau đó mới async load giá trị cũ để pre-populate
       dbGet('dem_le',rec.local_id).then(function(r){
         var vals=(r&&r.values)||rec.values||[];
-        inp.value=vals.map(function(v){return isDec?Number(v).toFixed(1):Math.round(v);}).join('+');
+        inp.value=vals.map(function(v){
+          return typeof v==='string'?v:(isDec?Number(v).toFixed(1):Math.round(v));
+        }).join('+');
         var len=inp.value.length;inp.setSelectionRange(len,len);
       });
-      // Evaluate math expression safely — chỉ cho phép 0-9 + - * / ( ) . space
+      // Evaluate math expression safely — chỉ cho phép 0-9 + - * / ( ) . ,  space
       function parseFormula(raw){
         if(!raw.trim())return[];
-        // Chỉ cho pass ký tự an toàn
-        var clean=raw.replace(/[^0-9+\-*/().\s]/g,'');
+        // Thay dấu phẩy (bàn phím mobile châu Âu) → dấu chấm
+        var clean=raw.replace(/,/g,'.').replace(/[^0-9+\-*/().\s]/g,'');
         if(!clean.trim())return[];
-        // Nếu chỉ có + thì giữ từng phần riêng (audit trail)
+        // Chỉ có phép cộng số dương → giữ từng phần riêng (audit trail)
         if(/^[\d.\s+]+$/.test(clean)){
           var parts=clean.split('+').map(function(s){return isDec?parseFloat(s.trim()):parseInt(s.trim());});
           return parts.filter(function(n){return!isNaN(n)&&n>0;});
         }
-        // Có - * / () → evaluate toàn bộ expression
-        try{
-          var result=Function('"use strict";return('+clean+')')();
-          if(isFinite(result)&&result>0)return[isDec?Math.round(result*100)/100:Math.round(result)];
-        }catch(e){}
+        // Có - * / () → giữ nguyên chuỗi expression để lịch sử hiển thị đầy đủ
+        var result=evalVal(clean);
+        if(result>0)return[clean.trim()]; // lưu chuỗi, không evaluate mất thông tin
         return[];
       }
       async function save(){
@@ -578,11 +595,14 @@ function buildMR(rec){
       // Display mode: async load là OK (không cần keyboard)
       dbGet('dem_le',rec.local_id).then(function(r){
         var vals=(r&&r.values)||rec.values||[];
-        var total=vals.reduce(function(a,b){return a+Number(b);},0);
+        var total=vals.reduce(function(a,b){return a+evalVal(b);},0);
         box.innerHTML='';
         if(vals.length>0){
           var txt=document.createElement('span');txt.className='mr-box-txt';
-          txt.textContent=vals.map(function(v){return isDec?Number(v).toFixed(1):Math.round(v);}).join('+');
+          // Hiển thị string expression nguyên vẹn, số thì format bình thường
+          txt.textContent=vals.map(function(v){
+            return typeof v==='string'?v:(isDec?Number(v).toFixed(1):Math.round(v));
+          }).join('+');
           box.appendChild(txt);
           var eq=document.createElement('span');eq.className='mr-box-eq';
           eq.textContent=' = '+(isDec?total.toFixed(1):Math.round(total))+' '+unit;

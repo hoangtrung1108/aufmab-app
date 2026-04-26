@@ -201,8 +201,8 @@ async function processDemApp(demAppData){
       }
       // values + ghi_chu — chỉ update nếu local đã synced (không ghi đè thay đổi đang chờ)
       if(local.sync_status==='synced'){
-        var sheetTotal=(row.values||[]).reduce(function(a,b){return a+b;},0);
-        var localTotal=(local.values||[]).reduce(function(a,b){return a+Number(b);},0);
+        var sheetTotal=(row.values||[]).reduce(function(a,b){return a+evalVal(b);},0);
+        var localTotal=(local.values||[]).reduce(function(a,b){return a+evalVal(b);},0);
         if(Math.abs(sheetTotal-localTotal)>0.001){local.values=row.values;changed=true;}
         var sheetGhi=row.ghi_chu||'';
         if(sheetGhi!==(local.ghi_chu||'')){local.ghi_chu=sheetGhi;changed=true;}

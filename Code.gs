@@ -7,6 +7,22 @@
 var SHEET_ID = "1Q9AQdT6K8zxsKUMk1mzm5JS1tgBXi_BbV45BpoP7aTM";
 var DRIVE_FOLDER_ID = "1W1aM9cSVX2u1PXtjEhPN0OxC4329OE1u";
 
+// Parse formula string từ cell (ví dụ: "5+1+1" hoặc "3*4" hoặc "(2+3)*4+5")
+// Pure addition → trả về array số [5,1,1] (audit trail)
+// Complex expression → trả về array string ["3*4"] (giữ lịch sử)
+function parseFormulaString(raw) {
+  var clean = String(raw || '').trim();
+  if (!clean) return [];
+  // Chỉ có phép cộng số dương → split thành array
+  if (/^[\d.\s+]+$/.test(clean)) {
+    return clean.split('+')
+      .map(function(s){ return parseFloat(s.trim()); })
+      .filter(function(n){ return !isNaN(n) && n > 0; });
+  }
+  // Expression phức tạp → giữ nguyên string
+  return [clean];
+}
+
 // Sheet DEM_APP — output của app (A-N, 14 cột):
 // A:ID  B:Ma_Phong  C:Ma_LoaiCV  D:Ten_VL_German  E:Große
 // F:He_So  G:So_Luong  H:Chieu_Dai  I:Ngay_Gio  J:Don_vi
@@ -133,14 +149,12 @@ function serverPull() {
       var vals = [];
       var isCoDai = false;
       if (fH && fH.charAt(0) === '=') {
-        // CO_DAI with formula: =3.5+2.0+1.0
+        // CO_DAI with formula: =3.5+2.0 or =(3.5+2)*1.5
         isCoDai = true;
-        vals = fH.slice(1).split('+').map(function(s){ return parseFloat(s.trim()); })
-                 .filter(function(n){ return !isNaN(n) && n > 0; });
+        vals = parseFormulaString(fH.slice(1));
       } else if (fG && fG.charAt(0) === '=') {
-        // CHI_DEM with formula: =5+1+1 hoặc =3.5+2.5
-        vals = fG.slice(1).split('+').map(function(s){ return parseFloat(s.trim()); })
-                 .filter(function(n){ return !isNaN(n) && n > 0; });
+        // CHI_DEM with formula: =5+1+1 or =3*4 or =(2+3)*4
+        vals = parseFormulaString(fG.slice(1));
       } else {
         // Legacy: plain numbers in cells
         var chieuDaiNum = Number(r[7]) || 0;
@@ -369,20 +383,33 @@ function writeDemLe(ss, records, anhUrlsByRoom) {
     if (vals.length > 0) {
       if (rec.kieu_tinh === "CHI_DEM") {
         if (vals.length === 1) {
-          // Giữ nguyên số thập phân — không Math.round
-          var n = Number(vals[0]);
-          soLuong = (n === Math.floor(n)) ? Math.floor(n) : Math.round(n * 100) / 100;
+          var v0 = vals[0];
+          if (typeof v0 === 'string' && /[+\-*/()]/.test(v0)) {
+            soLuong = '=' + v0; // expression → ghi công thức, Sheet tự tính
+          } else {
+            var n = Number(v0);
+            soLuong = (n === Math.floor(n)) ? Math.floor(n) : Math.round(n * 100) / 100;
+          }
         } else {
           soLuong = '=' + vals.map(function(v){
+            if (typeof v === 'string') return v; // giữ expression string nguyên
             var n = Number(v);
             return (n === Math.floor(n)) ? Math.floor(n) : Math.round(n * 100) / 100;
           }).join('+');
         }
       } else if (rec.kieu_tinh === "CO_DAI") {
         if (vals.length === 1) {
-          chieuDai = Math.round(Number(vals[0]) * 10) / 10;
+          var v0 = vals[0];
+          if (typeof v0 === 'string' && /[+\-*/()]/.test(v0)) {
+            chieuDai = '=' + v0;
+          } else {
+            chieuDai = Math.round(Number(v0) * 10) / 10;
+          }
         } else {
-          chieuDai = '=' + vals.map(function(v){ return Math.round(Number(v)*100)/100; }).join('+');
+          chieuDai = '=' + vals.map(function(v){
+            if (typeof v === 'string') return v;
+            return Math.round(Number(v)*100)/100;
+          }).join('+');
         }
         soLuong = hesoVal; // số lượng tuyến (×1/2/3/4)
       }
