@@ -116,7 +116,7 @@ async function saveAndSync(){
         phong_new:[]
       };
 
-      if(toP.length===0&&newV.length===0&&pendA.length===0){
+      if(toP.length===0&&pendA.length===0){
         toast('✓ Không có dữ liệu mới — đã đồng bộ hết rồi');
       } else {
         var pjs=await gsRun('serverPush',JSON.stringify(payload));
@@ -144,7 +144,7 @@ async function saveAndSync(){
   }catch(err){
     console.error('Save:',err);toast('Lỗi: '+(err.message||err));
   }finally{
-    btn.disabled=false;btn.innerHTML='&#128190; Save';
+    btn.disabled=false;btn.innerHTML='&#8593;';
   }
 }
 
