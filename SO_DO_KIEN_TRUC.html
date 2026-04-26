@@ -97,16 +97,21 @@
   .chat-send { padding: 0 14px; background: #0369a1; border: none; border-radius: 6px; color: #fff; font-size: 13px; cursor: pointer; font-weight: 600; transition: background 0.2s; align-self: flex-end; height: 36px; }
   .chat-send:hover { background: #0284c7; }
   .chat-send:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
-  .sf-filter-btn[data-sf="index.html"].active { background: #0c4a6e !important; color: #38bdf8 !important; border-color: #38bdf8 !important; }
-  .sf-filter-btn[data-sf="Code.gs"].active    { background: #422006 !important; color: #eab308 !important; border-color: #eab308 !important; }
-  .sf-filter-btn[data-sf="Google"].active     { background: #1e293b !important; color: #94a3b8 !important; border-color: #94a3b8 !important; }
+  .sf-filter-btn[data-sf="index.html"].active   { background: #0c4a6e !important; color: #38bdf8 !important; border-color: #38bdf8 !important; }
+  .sf-filter-btn[data-sf="js/db.js"].active     { background: #431407 !important; color: #fb923c !important; border-color: #fb923c !important; }
+  .sf-filter-btn[data-sf="js/render.js"].active { background: #2e1065 !important; color: #a78bfa !important; border-color: #a78bfa !important; }
+  .sf-filter-btn[data-sf="js/ui.js"].active     { background: #052e16 !important; color: #4ade80 !important; border-color: #4ade80 !important; }
+  .sf-filter-btn[data-sf="js/sync.js"].active   { background: #022c22 !important; color: #34d399 !important; border-color: #34d399 !important; }
+  .sf-filter-btn[data-sf="js/output.js"].active { background: #500724 !important; color: #f472b6 !important; border-color: #f472b6 !important; }
+  .sf-filter-btn[data-sf="Code.gs"].active      { background: #422006 !important; color: #eab308 !important; border-color: #eab308 !important; }
+  .sf-filter-btn[data-sf="Google"].active       { background: #1e293b !important; color: #94a3b8 !important; border-color: #94a3b8 !important; }
 
   /* ── Files Panel (left sidebar — accordion) ── */
   .files-panel { width: 280px; background: #1e293b; border-right: 1px solid #334155; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; }
   .files-panel-header { padding: 11px 14px 9px; border-bottom: 1px solid #334155; flex-shrink: 0; }
   .files-panel-header h4 { font-size: 12px; font-weight: 700; color: #f8fafc; margin-bottom: 2px; }
   .files-panel-header p  { font-size: 10px; color: #64748b; }
-  .files-panel-body { overflow-y: auto; flex: 1; scrollbar-width: thin; scrollbar-color: #334155 transparent; }
+  .files-panel-body { overflow-y: scroll; flex: 1; min-height: 0; max-height: calc(100vh - 115px); scrollbar-width: auto; scrollbar-color: #475569 #1e293b; }
 
   /* accordion item */
   .fp-item { border-bottom: 1px solid #1e293b; }
@@ -191,9 +196,14 @@
       <span id="multiselect-tip" style="font-size:11px;color:#475569;white-space:nowrap">Ctrl+click hoặc Ctrl+kéo để chọn nhiều block</span>
       <div class="toolbar-sep"></div>
       <span style="font-size:11px;color:#64748b;white-space:nowrap">📂 File:</span>
-      <button class="toolbar-btn sf-filter-btn" data-sf="index.html" onclick="filterBySF('index.html')" title="Chỉ hiện nodes từ index.html (Frontend)" style="border-left:3px solid #38bdf8">📄 html</button>
-      <button class="toolbar-btn sf-filter-btn" data-sf="Code.gs" onclick="filterBySF('Code.gs')" title="Chỉ hiện nodes từ Code.gs (GAS Backend)" style="border-left:3px solid #eab308">⚡ .gs</button>
-      <button class="toolbar-btn sf-filter-btn" data-sf="Google" onclick="filterBySF('Google')" title="Chỉ hiện Google Services (external)" style="border-left:3px solid #6b7280">☁️ Google</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="index.html"   onclick="filterBySF('index.html')"   title="HTML skeleton — Screens, Bottom Sheets"   style="border-left:3px solid #38bdf8">🏗 html</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="js/db.js"     onclick="filterBySF('js/db.js')"     title="js/db.js — IndexedDB helpers + utils"       style="border-left:3px solid #fb923c">🗄 db</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="js/render.js" onclick="filterBySF('js/render.js')" title="js/render.js — renderS1/S2, buildMR God Node" style="border-left:3px solid #a78bfa">🔧 render</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="js/ui.js"     onclick="filterBySF('js/ui.js')"     title="js/ui.js — Gewerk/DN, S3, Context Menu"     style="border-left:3px solid #4ade80">🖱 ui</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="js/sync.js"   onclick="filterBySF('js/sync.js')"   title="js/sync.js — saveAndSync, doSync, GAS API"  style="border-left:3px solid #34d399">🔄 sync</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="js/output.js" onclick="filterBySF('js/output.js')" title="js/output.js — Excel, Photo, Repair"         style="border-left:3px solid #f472b6">📤 out</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="Code.gs"      onclick="filterBySF('Code.gs')"      title="Code.gs — GAS Backend"                       style="border-left:3px solid #eab308">⚡ .gs</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="Google"       onclick="filterBySF('Google')"       title="Google Services (external)"                  style="border-left:3px solid #6b7280">☁️ ggl</button>
       <div class="toolbar-sep"></div>
       <div class="legend">
         <div class="legend-item"><div class="legend-dot" style="background:#0ea5e9"></div>UI Screen</div>
@@ -242,9 +252,14 @@
       <span style="font-size:11px;color:#f97316;font-weight:700">🌊 Chiều mũi tên = chiều DATA chảy</span>
       <div class="toolbar-sep"></div>
       <span style="font-size:11px;color:#64748b;white-space:nowrap">📂 File:</span>
-      <button class="toolbar-btn sf-filter-btn" data-sf="index.html" onclick="filterDfBySF('index.html')" title="Chỉ hiện nodes từ index.html (Frontend)" style="border-left:3px solid #38bdf8">📄 html</button>
-      <button class="toolbar-btn sf-filter-btn" data-sf="Code.gs" onclick="filterDfBySF('Code.gs')" title="Chỉ hiện nodes từ Code.gs (GAS Backend)" style="border-left:3px solid #eab308">⚡ .gs</button>
-      <button class="toolbar-btn sf-filter-btn" data-sf="Google" onclick="filterDfBySF('Google')" title="Chỉ hiện Google Services (external)" style="border-left:3px solid #6b7280">☁️ Google</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="index.html"   onclick="filterDfBySF('index.html')"   title="HTML skeleton"                              style="border-left:3px solid #38bdf8">🏗 html</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="js/db.js"     onclick="filterDfBySF('js/db.js')"     title="js/db.js — IndexedDB helpers"               style="border-left:3px solid #fb923c">🗄 db</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="js/render.js" onclick="filterDfBySF('js/render.js')" title="js/render.js — renderS1/S2, buildMR"        style="border-left:3px solid #a78bfa">🔧 render</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="js/ui.js"     onclick="filterDfBySF('js/ui.js')"     title="js/ui.js — Gewerk/DN, S3"                   style="border-left:3px solid #4ade80">🖱 ui</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="js/sync.js"   onclick="filterDfBySF('js/sync.js')"   title="js/sync.js — saveAndSync, doSync"           style="border-left:3px solid #34d399">🔄 sync</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="js/output.js" onclick="filterDfBySF('js/output.js')" title="js/output.js — Excel, Photo"                style="border-left:3px solid #f472b6">📤 out</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="Code.gs"      onclick="filterDfBySF('Code.gs')"      title="Code.gs — GAS Backend"                      style="border-left:3px solid #eab308">⚡ .gs</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="Google"       onclick="filterDfBySF('Google')"       title="Google Services (external)"                 style="border-left:3px solid #6b7280">☁️ ggl</button>
       <div class="toolbar-sep"></div>
       <div class="legend">
         <div class="legend-item"><div class="legend-dot" style="background:#0ea5e9"></div>UI Screen</div>
@@ -293,9 +308,13 @@
       <button class="toolbar-btn" onclick="cyOverview&&cyOverview.fit(undefined,60)">⊡ Fit All</button>
       <div class="toolbar-sep"></div>
       <span style="font-size:11px;color:#64748b;white-space:nowrap">📂 File:</span>
-      <button class="toolbar-btn sf-filter-btn" data-sf="index.html" onclick="filterOvBySF('index.html')" title="Chỉ hiện nodes từ index.html (Frontend)" style="border-left:3px solid #38bdf8">📄 html</button>
-      <button class="toolbar-btn sf-filter-btn" data-sf="Code.gs" onclick="filterOvBySF('Code.gs')" title="Chỉ hiện nodes từ Code.gs (GAS Backend)" style="border-left:3px solid #eab308">⚡ .gs</button>
-      <button class="toolbar-btn sf-filter-btn" data-sf="Google" onclick="filterOvBySF('Google')" title="Chỉ hiện Google Services (external)" style="border-left:3px solid #6b7280">☁️ Google</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="index.html"   onclick="filterOvBySF('index.html')"   title="HTML skeleton — Screens"                    style="border-left:3px solid #38bdf8">🏗 html</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="js/ui.js"     onclick="filterOvBySF('js/ui.js')"     title="js/ui.js — Forms & Menus"                   style="border-left:3px solid #4ade80">🖱 ui</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="js/render.js" onclick="filterOvBySF('js/render.js')" title="js/render.js — Render Engine"               style="border-left:3px solid #a78bfa">🔧 render</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="js/db.js"     onclick="filterOvBySF('js/db.js')"     title="js/db.js — IndexedDB"                       style="border-left:3px solid #fb923c">🗄 db</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="js/output.js" onclick="filterOvBySF('js/output.js')" title="js/output.js — Excel/Photo/Sync"            style="border-left:3px solid #f472b6">📤 out</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="Code.gs"      onclick="filterOvBySF('Code.gs')"      title="Code.gs — GAS Backend"                      style="border-left:3px solid #eab308">⚡ .gs</button>
+      <button class="toolbar-btn sf-filter-btn" data-sf="Google"       onclick="filterOvBySF('Google')"       title="Google Services (external)"                 style="border-left:3px solid #6b7280">☁️ ggl</button>
       <div class="toolbar-sep"></div>
       <div class="legend">
         <div class="legend-item"><div class="legend-dot" style="background:#0ea5e9"></div>UI Screen</div>
@@ -634,9 +653,17 @@ const groupColors = {
 
 // Source file → color mapping (used in filter buttons + detail panels)
 const sfColors = {
-  'index.html': '#38bdf8',  // frontend — blue
-  'Code.gs':    '#eab308',  // GAS backend — yellow
-  'Google':     '#94a3b8',  // external Google services — gray
+  'index.html':   '#38bdf8',  // HTML skeleton — blue
+  'css/app.css':  '#818cf8',  // styles — indigo
+  'js/config.js': '#94a3b8',  // config/state — slate
+  'js/db.js':     '#fb923c',  // IndexedDB helpers — orange
+  'js/render.js': '#a78bfa',  // render engine — purple
+  'js/ui.js':     '#4ade80',  // UI interactions — green
+  'js/sync.js':   '#34d399',  // sync engine — emerald
+  'js/output.js': '#f472b6',  // output (Excel/Photo) — pink
+  'js/app.js':    '#fbbf24',  // app boot — amber
+  'Code.gs':      '#eab308',  // GAS backend — yellow
+  'Google':       '#94a3b8',  // external Google services — gray
 };
 
 const initialPositions = {
@@ -674,21 +701,21 @@ const initialPositions = {
 
 const nodesData = [
   // ── index.html (frontend — all UI, logic, local storage) ──────────
-  { id: 's1',           label: '🏠 S1 — Bìa List',          labelEN: '🏠 S1 — Card List',           group: 'screen',  sf: 'index.html' },
-  { id: 's2',           label: '📋 S2 — Phòng Detail',       labelEN: '📋 S2 — Room Detail',          group: 'screen',  sf: 'index.html' },
-  { id: 's3',           label: '🔍 S3 — Material Selector',  labelEN: '🔍 S3 — Material Selector',    group: 'screen',  sf: 'index.html' },
-  { id: 'bs-newcard',   label: '➕ BS — Tạo Bìa Mới',        labelEN: '➕ BS — New Card',             group: 'sheet',   sf: 'index.html' },
-  { id: 'bs-gew',       label: '⚙️ BS — Thêm Gewerk/DN',    labelEN: '⚙️ BS — Add Gewerk/DN',       group: 'sheet',   sf: 'index.html' },
-  { id: 'ctx-menu',     label: '☰ Context Menu ···',         labelEN: '☰ Context Menu ···',           group: 'sheet',   sf: 'index.html' },
-  { id: 'bs-newmat',    label: '🆕 BS — Thêm Cấu Kiện Mới', labelEN: '🆕 BS — Add New Item',         group: 'sheet',   sf: 'index.html' },
-  { id: 'render-s1',    label: '🔧 renderS1()',               labelEN: '🔧 renderS1()',                group: 'logic',   sf: 'index.html' },
-  { id: 'render-s2',    label: '🔧 renderS2()',               labelEN: '🔧 renderS2()',                group: 'logic',   sf: 'index.html' },
-  { id: 'build-mr',     label: '🔧 buildMR()\n⭐ God Node',  labelEN: '🔧 buildMR()\n⭐ God Node',   group: 'logic',   sf: 'index.html' },
-  { id: 'sync',         label: '🔄 saveAndSync()\ndoSync()', labelEN: '🔄 saveAndSync()\ndoSync()',   group: 'logic',   sf: 'index.html' },
-  { id: 'indexeddb',    label: '🗄️ IndexedDB\nAufmaBV3',    labelEN: '🗄️ IndexedDB\nAufmaBV3',     group: 'data',    sf: 'index.html' },
-  { id: 'idb-local',    label: '💾 4 Stores\nphong/vat_lieu\ndem_le/anh', labelEN: '💾 4 Stores\nroom/material\ndata/photo', group: 'data', sf: 'index.html' },
-  { id: 'excel',        label: '📊 Excel Export\n(Inline XLSX)', labelEN: '📊 Excel Export\n(Inline XLSX)', group: 'output', sf: 'index.html' },
-  { id: 'photo',        label: '📷 Photo\nCapture',          labelEN: '📷 Photo\nCapture',            group: 'output',  sf: 'index.html' },
+  { id: 's1',           label: '🏠 S1 — Bìa List',          labelEN: '🏠 S1 — Card List',           group: 'screen',  sf: 'index.html'   },
+  { id: 's2',           label: '📋 S2 — Phòng Detail',       labelEN: '📋 S2 — Room Detail',          group: 'screen',  sf: 'index.html'   },
+  { id: 's3',           label: '🔍 S3 — Material Selector',  labelEN: '🔍 S3 — Material Selector',    group: 'screen',  sf: 'js/ui.js'     },
+  { id: 'bs-newcard',   label: '➕ BS — Tạo Bìa Mới',        labelEN: '➕ BS — New Card',             group: 'sheet',   sf: 'index.html'   },
+  { id: 'bs-gew',       label: '⚙️ BS — Thêm Gewerk/DN',    labelEN: '⚙️ BS — Add Gewerk/DN',       group: 'sheet',   sf: 'js/ui.js'     },
+  { id: 'ctx-menu',     label: '☰ Context Menu ···',         labelEN: '☰ Context Menu ···',           group: 'sheet',   sf: 'js/ui.js'     },
+  { id: 'bs-newmat',    label: '🆕 BS — Thêm Cấu Kiện Mới', labelEN: '🆕 BS — Add New Item',         group: 'sheet',   sf: 'js/ui.js'     },
+  { id: 'render-s1',    label: '🔧 renderS1()',               labelEN: '🔧 renderS1()',                group: 'logic',   sf: 'js/render.js' },
+  { id: 'render-s2',    label: '🔧 renderS2()',               labelEN: '🔧 renderS2()',                group: 'logic',   sf: 'js/render.js' },
+  { id: 'build-mr',     label: '🔧 buildMR()\n⭐ God Node',  labelEN: '🔧 buildMR()\n⭐ God Node',   group: 'logic',   sf: 'js/render.js' },
+  { id: 'sync',         label: '🔄 saveAndSync()\ndoSync()', labelEN: '🔄 saveAndSync()\ndoSync()',   group: 'logic',   sf: 'js/sync.js'   },
+  { id: 'indexeddb',    label: '🗄️ IndexedDB\nAufmaBV3',    labelEN: '🗄️ IndexedDB\nAufmaBV3',     group: 'data',    sf: 'js/db.js'     },
+  { id: 'idb-local',    label: '💾 4 Stores\nphong/vat_lieu\ndem_le/anh', labelEN: '💾 4 Stores\nroom/material\ndata/photo', group: 'data', sf: 'js/db.js' },
+  { id: 'excel',        label: '📊 Excel Export\n(Inline XLSX)', labelEN: '📊 Excel Export\n(Inline XLSX)', group: 'output', sf: 'js/output.js' },
+  { id: 'photo',        label: '📷 Photo\nCapture',          labelEN: '📷 Photo\nCapture',            group: 'output',  sf: 'js/output.js' },
   // ── Code.gs (GAS backend — Google Apps Script) ────────────────────
   { id: 'gas-entry',    label: '⚡ GAS doGet()\nWebApp Entry',labelEN: '⚡ GAS doGet()\nWebApp Entry', group: 'gas',    sf: 'Code.gs'    },
   { id: 'server-pull',  label: '📥 serverPull()\nRead Sheets', labelEN: '📥 serverPull()\nRead Sheets', group: 'gas',  sf: 'Code.gs'    },
@@ -1491,11 +1518,11 @@ let cyOverview = null;
 
 const overviewNodes = [
   // sf = which source file owns this block
-  { id:'ov-screens',  label:'📱 UI Screens\nS1 · S2 · S3\n[ index.html ]',              group:'screen',  sf:'index.html', desc:'3 màn hình chính: S1 (Card List), S2 (Room Detail nhập liệu), S3 (Material Selector). Điều hướng qua showScreen(). Toàn bộ UI trong 1 file index.html.' },
-  { id:'ov-forms',    label:'⚙️ Forms & Menus\nBS · Context Menu\n[ index.html ]',       group:'sheet',   sf:'index.html', desc:'4 Bottom Sheets (Tạo bìa mới, Thêm Gewerk/DN, Thêm cấu kiện, BS Halterung) + Context Menu ···. Hiện lên overlay khi user tương tác, đóng sau khi xác nhận.' },
-  { id:'ov-render',   label:'🔧 Render Engine\nrenderS1/S2 · buildMR\n[ index.html ]',   group:'logic',   sf:'index.html', desc:'renderS1() và renderS2() build lại DOM từ IndexedDB. buildMR() là God Node — tạo từng dòng cấu kiện với +5/+1, công thức, hệ số. Không re-render toàn bộ — update DOM tại chỗ.' },
-  { id:'ov-idb',      label:'🗄️ IndexedDB\n4 stores offline\n[ index.html ]',            group:'data',    sf:'index.html', desc:'Offline-first local database. 4 stores: phong, vat_lieu, dem_le (dữ liệu đo chính), anh (ảnh base64). Mọi thao tác lưu đây trước — sync lên cloud sau.' },
-  { id:'ov-output',   label:'📤 Output\nExcel · Photo · Sync\n[ index.html ]',            group:'output',  sf:'index.html', desc:'3 loại output: (1) Excel inline XLSX download, (2) Photo capture → base64 → IndexedDB, (3) saveAndSync() push data + ảnh lên GAS. Đều chạy offline-capable.' },
+  { id:'ov-screens',  label:'📱 UI Screens\nS1 · S2 · S3\n[ index.html ]',               group:'screen',  sf:'index.html',   desc:'3 màn hình chính: S1 (Card List), S2 (Room Detail nhập liệu), S3 (Material Selector). HTML thuần trong index.html. Điều hướng qua showScreen() trong db.js.' },
+  { id:'ov-forms',    label:'⚙️ Forms & Menus\nBS · Context Menu\n[ js/ui.js ]',          group:'sheet',   sf:'js/ui.js',     desc:'4 Bottom Sheets + Context Menu. Logic xử lý trong js/ui.js: openBsGew(), showGewCtx(), openNewMatSheet(), goToS3(), confirmMaterials(). HTML trong index.html.' },
+  { id:'ov-render',   label:'🔧 Render Engine\nrenderS1/S2 · buildMR\n[ js/render.js ]', group:'logic',   sf:'js/render.js', desc:'renderS1() và renderS2() build lại DOM từ IndexedDB. buildMR() là God Node (739 dòng) — tạo từng dòng cấu kiện với +5/+1, công thức, hệ số ×. js/render.js.' },
+  { id:'ov-idb',      label:'🗄️ IndexedDB\n4 stores offline\n[ js/db.js ]',              group:'data',    sf:'js/db.js',     desc:'Offline-first local database. 4 stores: phong, vat_lieu, dem_le (dữ liệu đo chính), anh (ảnh base64). Helpers: openDB, dbPut, dbGet, dbGetAll, dbIdx. js/db.js.' },
+  { id:'ov-output',   label:'📤 Output\nExcel · Photo · Sync\n[ js/output.js · sync.js ]',group:'output', sf:'js/output.js', desc:'Excel: buildXLSXBytes + exportExcel (js/output.js). Photo: capturePhoto + renderPhotoStrip (js/output.js). Sync: saveAndSync + doSync + gsRun (js/sync.js).' },
   { id:'ov-gas',      label:'⚡ GAS Backend\n[ Code.gs ]',                                group:'gas',     sf:'Code.gs',    desc:'Google Apps Script WebApp. 5 functions: serverPull (đọc sheets), serverPush (ghi dem_le), serverUploadImage (Drive), serverAddMaterial (CONG_VIEC), doGet (serve HTML). Gọi qua google.script.run.' },
   { id:'ov-sheets',   label:'📊 Google Sheets\nPHONG · CONG_VIEC · bsGew\n[ Google ]',   group:'storage', sf:'Google',     desc:'3 sheets: PHONG (danh sách phòng), CONG_VIEC (master cấu kiện, format dọc), bsGew (output đo đạc thực tế — mỗi row = 1 cấu kiện). Sheet ID cố định.' },
   { id:'ov-drive',    label:'📁 Google Drive\nPhoto Storage\n[ Google ]',                 group:'storage', sf:'Google',     desc:'Lưu ảnh công trường. Tự tạo subfolder theo tên phòng. File JPEG. URL trả về lưu vào IndexedDB. Folder ID: 1W1aM9cSVX2u1PXtjEhPN0OxC4329OE1u.' },
@@ -1663,49 +1690,193 @@ function filterOvBySF(sf) {
 // ── Files Panel data ───────────────────────────────────────────────
 // Toàn bộ file code trong dự án — kể cả file không xuất hiện trong sơ đồ
 const filesInfo = [
+  // ── HTML Skeleton ──────────────────────────────────────────
   {
     sf: 'index.html',
-    lines: 2476,
+    lines: 192,
     color: '#38bdf8',
-    role: 'Toàn bộ frontend: UI Screens, Bottom Sheets, logic render, IndexedDB offline, Excel export, photo capture. Chạy trực tiếp trên browser/iPad — không cần build tool.',
+    tag: 'entry point',
+    role: 'HTML skeleton — khai báo DOM các screens, bottom sheets, toast. Load css/app.css + 7 js/ modules. Không còn inline style/script (đã tách ra từ v49).',
     nodes: [
-      { label: '🏠 S1 — Bìa List',        group: 'screen'  },
-      { label: '📋 S2 — Phòng Detail',     group: 'screen'  },
-      { label: '🔍 S3 — Material Selector',group: 'screen'  },
-      { label: '➕ BS Tạo Bìa Mới',        group: 'sheet'   },
-      { label: '⚙️ BS Gewerk / DN',        group: 'sheet'   },
-      { label: '☰ Context Menu ···',       group: 'sheet'   },
-      { label: '🆕 BS Thêm Cấu Kiện',      group: 'sheet'   },
-      { label: '🔧 renderS1()',            group: 'logic'   },
-      { label: '🔧 renderS2()',            group: 'logic'   },
-      { label: '🔧 buildMR() ⭐',          group: 'logic'   },
-      { label: '🔄 saveAndSync()',         group: 'logic'   },
-      { label: '🗄️ IndexedDB AufmaBV3',   group: 'data'    },
-      { label: '💾 4 Stores (dem_le...)',  group: 'data'    },
-      { label: '📊 Excel Export (XLSX)',   group: 'output'  },
-      { label: '📷 Photo Capture',         group: 'output'  },
+      { label: '🏠 S1 — Bìa List',         group: 'screen' },
+      { label: '📋 S2 — Phòng Detail',      group: 'screen' },
+      { label: '🔍 S3 — Material Selector', group: 'screen' },
+      { label: '➕ BS Tạo Bìa Mới',         group: 'sheet'  },
+      { label: '⚙️ BS Gewerk / DN',         group: 'sheet'  },
+      { label: '☰ Context Menu ···',        group: 'sheet'  },
+      { label: '🆕 BS Thêm Cấu Kiện',       group: 'sheet'  },
     ]
   },
+  // ── CSS ────────────────────────────────────────────────────
+  {
+    sf: 'css/app.css',
+    fileName: 'css/app.css',
+    lines: 162,
+    color: '#818cf8',
+    tag: 'styles',
+    role: 'Toàn bộ CSS của app — layout, header, cards, bottom sheets, buttons, modals. Tách từ inline <style> trong index.html.',
+    nodes: []
+  },
+  // ── JS Modules ─────────────────────────────────────────────
+  {
+    sf: 'js/config.js',
+    fileName: 'js/config.js',
+    lines: 111,
+    color: '#94a3b8',
+    tag: 'config',
+    role: 'Hằng số và state toàn cục: DB_NAME, DB_VER, MOCK_PHONG, MOCK_VL, DN_PRESETS, ALL_GEWERKE, biến trạng thái curPhong, selectedGewerke...',
+    nodes: [
+      { label: '📦 MOCK_PHONG / MOCK_VL',   group: 'data'  },
+      { label: '⚙️ DN_PRESETS',              group: 'data'  },
+      { label: '🌐 ALL_GEWERKE',             group: 'data'  },
+    ]
+  },
+  {
+    sf: 'js/db.js',
+    fileName: 'js/db.js',
+    lines: 106,
+    color: '#fb923c',
+    tag: 'persistence',
+    role: 'IndexedDB helpers (openDB, dbPut, dbGet, dbGetAll, dbIdx) + utilities dùng chung (uuid, esc, toast, showScreen, showSheet, closeSheet, gewCls, initGewerkChips, saveCustomData, loadCustomData).',
+    nodes: [
+      { label: '🗄️ openDB() / IndexedDB',   group: 'data'  },
+      { label: '💾 dbPut / dbGet / dbGetAll',group: 'data'  },
+      { label: '🔔 toast()',                 group: 'logic' },
+    ]
+  },
+  {
+    sf: 'js/render.js',
+    fileName: 'js/render.js',
+    lines: 739,
+    color: '#a78bfa',
+    tag: 'render engine',
+    role: 'Engine render UI: renderS1() danh sách bìa, renderS2() chi tiết phòng, buildMR() "God Node" — node lớn nhất, xây dựng toàn bộ measurement row. addSeg() thêm segment đo, goS1().',
+    nodes: [
+      { label: '🔧 renderS1()',              group: 'logic' },
+      { label: '🔧 renderS2()',              group: 'logic' },
+      { label: '🔧 buildMR() ⭐',            group: 'logic' },
+      { label: '➕ addSeg()',                group: 'logic' },
+    ]
+  },
+  {
+    sf: 'js/ui.js',
+    fileName: 'js/ui.js',
+    lines: 416,
+    color: '#4ade80',
+    tag: 'interactions',
+    role: 'Xử lý tương tác người dùng: addPhong() tạo thẻ mới, openBsGew() chọn Gewerk/DN, showGewCtx() context menu, renderDNSections(), S3 screen logic (renderS3, toggleAllS3, confirmMaterials).',
+    nodes: [
+      { label: '➕ addPhong() — tạo thẻ',   group: 'logic' },
+      { label: '⚙️ openBsGew()',             group: 'logic' },
+      { label: '🔍 renderS3() / S3 logic',  group: 'logic' },
+    ]
+  },
+  {
+    sf: 'js/sync.js',
+    fileName: 'js/sync.js',
+    lines: 344,
+    color: '#34d399',
+    tag: 'sync engine',
+    role: 'Đồng bộ 2 chiều với Google Sheet: pullOnly() kéo dữ liệu xuống, saveAndSync() push lên, processDemApp() xử lý response, gsRun() gọi GAS API, doSync() main entry. Chứa IS_GAS flag và GAS_API URL.',
+    nodes: [
+      { label: '🔄 saveAndSync() — Push',   group: 'logic' },
+      { label: '📥 pullOnly() — Pull',       group: 'logic' },
+      { label: '🌐 gsRun() / GAS_API',       group: 'logic' },
+    ]
+  },
+  {
+    sf: 'js/output.js',
+    fileName: 'js/output.js',
+    lines: 353,
+    color: '#f472b6',
+    tag: 'output',
+    role: 'Xuất dữ liệu ra ngoài: capturePhoto() chụp ảnh + upload Drive, makePhotoFilename() đặt tên ảnh, exportExcel() xuất XLSX offline, repairCardIds() sửa card_id, backupToLocalStorage() backup 30s.',
+    nodes: [
+      { label: '📊 exportExcel() — XLSX',   group: 'output' },
+      { label: '📷 capturePhoto()',          group: 'output' },
+      { label: '🔧 repairCardIds()',         group: 'logic'  },
+      { label: '💾 backupToLocalStorage()', group: 'data'   },
+    ]
+  },
+  {
+    sf: 'js/app.js',
+    fileName: 'js/app.js',
+    lines: 80,
+    color: '#fbbf24',
+    tag: 'bootstrap',
+    role: 'Boot app: init() khởi tạo toàn bộ (openDB, pull GAS, renderS1, background sync), loadCustomData() nạp Gewerk & DN từ localStorage. Điểm khởi đầu duy nhất.',
+    nodes: [
+      { label: '🚀 init() — App Boot',      group: 'logic' },
+    ]
+  },
+  // ── Future Placeholders ────────────────────────────────────
+  {
+    sf: 'js/auth.js',
+    fileName: 'js/auth.js',
+    lines: 15,
+    color: '#94a3b8',
+    tag: 'in future',
+    role: 'Xác thực người dùng — PIN đơn giản hoặc mã công trình. Session localStorage. Không dùng OAuth / Firebase (offline-first).',
+    nodes: []
+  },
+  {
+    sf: 'js/projects.js',
+    fileName: 'js/projects.js',
+    lines: 15,
+    color: '#94a3b8',
+    tag: 'in future',
+    role: 'Đa dự án / đa công trình — mỗi công trình 1 Google Sheet riêng. Màn hình chọn dự án trước khi vào app chính.',
+    nodes: []
+  },
+  {
+    sf: 'js/pdf.js',
+    fileName: 'js/pdf.js',
+    lines: 15,
+    color: '#94a3b8',
+    tag: 'in future',
+    role: 'Xem bản vẽ PDF tầng — render bằng PDF.js, hiển thị canvas trong app. Nền cho layout.js vẽ annotation đè lên.',
+    nodes: []
+  },
+  {
+    sf: 'js/layout.js',
+    fileName: 'js/layout.js',
+    lines: 15,
+    color: '#94a3b8',
+    tag: 'in future',
+    role: 'Annotation layer đè lên bản vẽ PDF — pen, marker phòng, text overlay. Liên kết annotation với record đo (ma_phong + gewerk). Lưu IndexedDB + sync Sheet.',
+    nodes: []
+  },
+  {
+    sf: 'js/ticket.js',
+    fileName: 'js/ticket.js',
+    lines: 15,
+    color: '#94a3b8',
+    tag: 'in future',
+    role: 'Tổng hợp + báo cáo công việc — theo tầng / theo Gewerk / theo phòng. Xuất PDF hoặc Excel. Gửi email báo cáo qua GAS MailApp.',
+    nodes: []
+  },
+  // ── GAS Backend ────────────────────────────────────────────
   {
     sf: 'Code.gs',
     lines: 468,
     color: '#eab308',
     role: 'Google Apps Script WebApp backend: nhận request từ frontend, đọc/ghi Google Sheets, upload ảnh lên Drive. Deploy dưới dạng Web App URL.',
     nodes: [
-      { label: '⚡ doGet() — WebApp Entry', group: 'gas' },
-      { label: '📥 serverPull()',           group: 'gas' },
-      { label: '📤 serverPush()',           group: 'gas' },
-      { label: '🖼️ serverUploadImage()',   group: 'gas' },
-      { label: '➕ serverAddMaterial()',    group: 'gas' },
+      { label: '⚡ doGet() — WebApp Entry',  group: 'gas' },
+      { label: '📥 serverPull()',            group: 'gas' },
+      { label: '📤 serverPush()',            group: 'gas' },
+      { label: '🖼️ serverUploadImage()',    group: 'gas' },
+      { label: '➕ serverAddMaterial()',     group: 'gas' },
     ]
   },
+  // ── Dev / Config ───────────────────────────────────────────
   {
     sf: null,
     fileName: 'server.js',
     lines: 37,
     color: '#64748b',
     tag: 'dev only',
-    role: 'Dev server local — chỉ chạy trên máy tính khi phát triển. Serve file tĩnh tại port 62608. Không được deploy lên production.',
+    role: 'Dev server local — chỉ chạy trên máy tính khi phát triển. Serve file tĩnh tại port 62608. Không deploy lên production.',
     nodes: []
   },
   {
@@ -1737,8 +1908,12 @@ function renderFilesPanel() {
   const body = document.getElementById('files-panel-body');
   if (!body) return;
 
+  // update header count
+  const countEl = document.getElementById('fp-count');
+  if (countEl) countEl.textContent = filesInfo.length + ' files';
+
   body.innerHTML = filesInfo.map((f, idx) => {
-    const name     = f.sf || f.fileName;
+    const name     = f.fileName || f.sf;
     const isActive = !!(activeSF && activeSF === f.sf);
     const isOpen   = fpExpanded.has(idx);
     const hasNodes = f.nodes.length > 0;
