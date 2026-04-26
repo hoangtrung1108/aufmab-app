@@ -1663,49 +1663,193 @@ function filterOvBySF(sf) {
 // ── Files Panel data ───────────────────────────────────────────────
 // Toàn bộ file code trong dự án — kể cả file không xuất hiện trong sơ đồ
 const filesInfo = [
+  // ── HTML Skeleton ──────────────────────────────────────────
   {
     sf: 'index.html',
-    lines: 2476,
+    lines: 192,
     color: '#38bdf8',
-    role: 'Toàn bộ frontend: UI Screens, Bottom Sheets, logic render, IndexedDB offline, Excel export, photo capture. Chạy trực tiếp trên browser/iPad — không cần build tool.',
+    tag: 'entry point',
+    role: 'HTML skeleton — khai báo DOM các screens, bottom sheets, toast. Load css/app.css + 7 js/ modules. Không còn inline style/script (đã tách ra từ v49).',
     nodes: [
-      { label: '🏠 S1 — Bìa List',        group: 'screen'  },
-      { label: '📋 S2 — Phòng Detail',     group: 'screen'  },
-      { label: '🔍 S3 — Material Selector',group: 'screen'  },
-      { label: '➕ BS Tạo Bìa Mới',        group: 'sheet'   },
-      { label: '⚙️ BS Gewerk / DN',        group: 'sheet'   },
-      { label: '☰ Context Menu ···',       group: 'sheet'   },
-      { label: '🆕 BS Thêm Cấu Kiện',      group: 'sheet'   },
-      { label: '🔧 renderS1()',            group: 'logic'   },
-      { label: '🔧 renderS2()',            group: 'logic'   },
-      { label: '🔧 buildMR() ⭐',          group: 'logic'   },
-      { label: '🔄 saveAndSync()',         group: 'logic'   },
-      { label: '🗄️ IndexedDB AufmaBV3',   group: 'data'    },
-      { label: '💾 4 Stores (dem_le...)',  group: 'data'    },
-      { label: '📊 Excel Export (XLSX)',   group: 'output'  },
-      { label: '📷 Photo Capture',         group: 'output'  },
+      { label: '🏠 S1 — Bìa List',         group: 'screen' },
+      { label: '📋 S2 — Phòng Detail',      group: 'screen' },
+      { label: '🔍 S3 — Material Selector', group: 'screen' },
+      { label: '➕ BS Tạo Bìa Mới',         group: 'sheet'  },
+      { label: '⚙️ BS Gewerk / DN',         group: 'sheet'  },
+      { label: '☰ Context Menu ···',        group: 'sheet'  },
+      { label: '🆕 BS Thêm Cấu Kiện',       group: 'sheet'  },
     ]
   },
+  // ── CSS ────────────────────────────────────────────────────
+  {
+    sf: 'index.html',
+    fileName: 'css/app.css',
+    lines: 162,
+    color: '#38bdf8',
+    tag: 'styles',
+    role: 'Toàn bộ CSS của app — layout, header, cards, bottom sheets, buttons, modals. Tách từ inline <style> trong index.html.',
+    nodes: []
+  },
+  // ── JS Modules ─────────────────────────────────────────────
+  {
+    sf: 'index.html',
+    fileName: 'js/config.js',
+    lines: 111,
+    color: '#38bdf8',
+    tag: 'config',
+    role: 'Hằng số và state toàn cục: DB_NAME, DB_VER, MOCK_PHONG, MOCK_VL, DN_PRESETS, ALL_GEWERKE, biến trạng thái curPhong, selectedGewerke...',
+    nodes: [
+      { label: '📦 MOCK_PHONG / MOCK_VL',   group: 'data'  },
+      { label: '⚙️ DN_PRESETS',              group: 'data'  },
+      { label: '🌐 ALL_GEWERKE',             group: 'data'  },
+    ]
+  },
+  {
+    sf: 'index.html',
+    fileName: 'js/db.js',
+    lines: 106,
+    color: '#38bdf8',
+    tag: 'persistence',
+    role: 'IndexedDB helpers (openDB, dbPut, dbGet, dbGetAll, dbIdx) + utilities dùng chung (uuid, esc, toast, showScreen, showSheet, closeSheet, gewCls, initGewerkChips, saveCustomData, loadCustomData).',
+    nodes: [
+      { label: '🗄️ openDB() / IndexedDB',   group: 'data'  },
+      { label: '💾 dbPut / dbGet / dbGetAll',group: 'data'  },
+      { label: '🔔 toast()',                 group: 'logic' },
+    ]
+  },
+  {
+    sf: 'index.html',
+    fileName: 'js/render.js',
+    lines: 739,
+    color: '#38bdf8',
+    tag: 'render engine',
+    role: 'Engine render UI: renderS1() danh sách bìa, renderS2() chi tiết phòng, buildMR() "God Node" — node lớn nhất, xây dựng toàn bộ measurement row. addSeg() thêm segment đo, goS1().',
+    nodes: [
+      { label: '🔧 renderS1()',              group: 'logic' },
+      { label: '🔧 renderS2()',              group: 'logic' },
+      { label: '🔧 buildMR() ⭐',            group: 'logic' },
+      { label: '➕ addSeg()',                group: 'logic' },
+    ]
+  },
+  {
+    sf: 'index.html',
+    fileName: 'js/ui.js',
+    lines: 416,
+    color: '#38bdf8',
+    tag: 'interactions',
+    role: 'Xử lý tương tác người dùng: addPhong() tạo thẻ mới, openBsGew() chọn Gewerk/DN, showGewCtx() context menu, renderDNSections(), S3 screen logic (renderS3, toggleAllS3, confirmMaterials).',
+    nodes: [
+      { label: '➕ addPhong() — tạo thẻ',   group: 'logic' },
+      { label: '⚙️ openBsGew()',             group: 'logic' },
+      { label: '🔍 renderS3() / S3 logic',  group: 'logic' },
+    ]
+  },
+  {
+    sf: 'index.html',
+    fileName: 'js/sync.js',
+    lines: 344,
+    color: '#38bdf8',
+    tag: 'sync engine',
+    role: 'Đồng bộ 2 chiều với Google Sheet: pullOnly() kéo dữ liệu xuống, saveAndSync() push lên, processDemApp() xử lý response, gsRun() gọi GAS API, doSync() main entry. Chứa IS_GAS flag và GAS_API URL.',
+    nodes: [
+      { label: '🔄 saveAndSync() — Push',   group: 'logic' },
+      { label: '📥 pullOnly() — Pull',       group: 'logic' },
+      { label: '🌐 gsRun() / GAS_API',       group: 'logic' },
+    ]
+  },
+  {
+    sf: 'index.html',
+    fileName: 'js/output.js',
+    lines: 353,
+    color: '#38bdf8',
+    tag: 'output',
+    role: 'Xuất dữ liệu ra ngoài: capturePhoto() chụp ảnh + upload Drive, makePhotoFilename() đặt tên ảnh, exportExcel() xuất XLSX offline, repairCardIds() sửa card_id, backupToLocalStorage() backup 30s.',
+    nodes: [
+      { label: '📊 exportExcel() — XLSX',   group: 'output' },
+      { label: '📷 capturePhoto()',          group: 'output' },
+      { label: '🔧 repairCardIds()',         group: 'logic'  },
+      { label: '💾 backupToLocalStorage()', group: 'data'   },
+    ]
+  },
+  {
+    sf: 'index.html',
+    fileName: 'js/app.js',
+    lines: 80,
+    color: '#38bdf8',
+    tag: 'bootstrap',
+    role: 'Boot app: init() khởi tạo toàn bộ (openDB, pull GAS, renderS1, background sync), loadCustomData() nạp Gewerk & DN từ localStorage. Điểm khởi đầu duy nhất.',
+    nodes: [
+      { label: '🚀 init() — App Boot',      group: 'logic' },
+    ]
+  },
+  // ── Future Placeholders ────────────────────────────────────
+  {
+    sf: 'index.html',
+    fileName: 'js/auth.js',
+    lines: 15,
+    color: '#94a3b8',
+    tag: 'in future',
+    role: 'Xác thực người dùng — PIN đơn giản hoặc mã công trình. Session localStorage. Không dùng OAuth / Firebase (offline-first).',
+    nodes: []
+  },
+  {
+    sf: 'index.html',
+    fileName: 'js/projects.js',
+    lines: 15,
+    color: '#94a3b8',
+    tag: 'in future',
+    role: 'Đa dự án / đa công trình — mỗi công trình 1 Google Sheet riêng. Màn hình chọn dự án trước khi vào app chính.',
+    nodes: []
+  },
+  {
+    sf: 'index.html',
+    fileName: 'js/pdf.js',
+    lines: 15,
+    color: '#94a3b8',
+    tag: 'in future',
+    role: 'Xem bản vẽ PDF tầng — render bằng PDF.js, hiển thị canvas trong app. Nền cho layout.js vẽ annotation đè lên.',
+    nodes: []
+  },
+  {
+    sf: 'index.html',
+    fileName: 'js/layout.js',
+    lines: 15,
+    color: '#94a3b8',
+    tag: 'in future',
+    role: 'Annotation layer đè lên bản vẽ PDF — pen, marker phòng, text overlay. Liên kết annotation với record đo (ma_phong + gewerk). Lưu IndexedDB + sync Sheet.',
+    nodes: []
+  },
+  {
+    sf: 'index.html',
+    fileName: 'js/ticket.js',
+    lines: 15,
+    color: '#94a3b8',
+    tag: 'in future',
+    role: 'Tổng hợp + báo cáo công việc — theo tầng / theo Gewerk / theo phòng. Xuất PDF hoặc Excel. Gửi email báo cáo qua GAS MailApp.',
+    nodes: []
+  },
+  // ── GAS Backend ────────────────────────────────────────────
   {
     sf: 'Code.gs',
     lines: 468,
     color: '#eab308',
     role: 'Google Apps Script WebApp backend: nhận request từ frontend, đọc/ghi Google Sheets, upload ảnh lên Drive. Deploy dưới dạng Web App URL.',
     nodes: [
-      { label: '⚡ doGet() — WebApp Entry', group: 'gas' },
-      { label: '📥 serverPull()',           group: 'gas' },
-      { label: '📤 serverPush()',           group: 'gas' },
-      { label: '🖼️ serverUploadImage()',   group: 'gas' },
-      { label: '➕ serverAddMaterial()',    group: 'gas' },
+      { label: '⚡ doGet() — WebApp Entry',  group: 'gas' },
+      { label: '📥 serverPull()',            group: 'gas' },
+      { label: '📤 serverPush()',            group: 'gas' },
+      { label: '🖼️ serverUploadImage()',    group: 'gas' },
+      { label: '➕ serverAddMaterial()',     group: 'gas' },
     ]
   },
+  // ── Dev / Config ───────────────────────────────────────────
   {
     sf: null,
     fileName: 'server.js',
     lines: 37,
     color: '#64748b',
     tag: 'dev only',
-    role: 'Dev server local — chỉ chạy trên máy tính khi phát triển. Serve file tĩnh tại port 62608. Không được deploy lên production.',
+    role: 'Dev server local — chỉ chạy trên máy tính khi phát triển. Serve file tĩnh tại port 62608. Không deploy lên production.',
     nodes: []
   },
   {
