@@ -84,14 +84,26 @@ var MOCK_VL = [
 
 // DN presets per gewerk
 var DN_PRESETS = {
-  'Lüftung': ['DN100','DN125','DN160','DN200','DN250','DN315'],
-  'Heizung': ['DN15','DN20','DN25','DN32','DN40','DN50','DN65'],
-  'Kälte': ['DN15','DN20','DN25','DN32','DN40','DN50','DN65'],
-  'Abwasser': ['DN50','DN70','DN90','DN100','DN110','DN125','DN150','DN200'],
-  'Halterung': ['M10','M41','M42','M72'],
+  // Lüftung — ống gió, từ DN100 trở lên
+  'Lüftung':     ['DN100','DN125','DN160','DN200','DN250','DN315','DN400','DN500','DN630'],
+  // Heizung & Kälte — mọi cỡ
+  'Heizung':     ['DN15','DN20','DN25','DN32','DN40','DN50','DN65','DN80','DN100'],
+  'Kälte':       ['DN15','DN20','DN25','DN32','DN40','DN50','DN65','DN80','DN100'],
+  // Abwasser — nước thải, DN50 trở lên
+  'Abwasser':    ['DN50','DN70','DN90','DN100','DN110','DN125','DN150','DN200'],
+  // Halterung & Befestigung — thanh đỡ M-size
+  'Halterung':   ['M10','M41','M42','M72'],
+  'Befestigung': ['M10','M41','M42','M72'],
+  // Brandschutz — chống cháy
   'Brandschutz': ['DN100','DN125','DN150','DN200'],
-  'Sanitär': ['DN10','DN15','DN20','DN25','DN32','DN40','DN50','DN65','DN80','DN100'],
-  'Elektro': ['M16','M20','M25','M32','M50','M63'],
+  // Sanitär — tất cả cỡ nhỏ
+  'Sanitär':     ['DN10','DN15','DN20','DN25','DN32','DN40','DN50','DN65','DN80','DN100'],
+  'Elektro':     ['M16','M20','M25','M32','M50','M63'],
+  // Nước cấp (Trinkwasser) — DN12 đến DN65
+  'TWK':         ['DN12','DN15','DN20','DN25','DN32','DN40','DN50','DN65'],  // Trinkwasser Kalt
+  'TWW':         ['DN12','DN15','DN20','DN25','DN32','DN40','DN50','DN65'],  // Trinkwasser Warm
+  'TWZ':         ['DN12','DN15','DN20','DN25','DN32','DN40','DN50','DN65'],  // Trinkwasser Zirkulation
+  'TWB':         ['DN12','DN15','DN20','DN25','DN32','DN40','DN50','DN65'],  // Trinkwasser (Befestigung/Bau)
 };
 
 // ---- STATE ----

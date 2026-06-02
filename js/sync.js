@@ -19,6 +19,7 @@ async function pullOnly(){
       if(!data.success)throw new Error('Pull failed');
       for(var i=0;i<(data.phong||[]).length;i++){var p=data.phong[i];var ex=await dbGet('phong',p.id);if(!ex||ex.synced!==false){p.synced=true;p.is_new=false;await dbPut('phong',p);}}
       for(var i=0;i<(data.vat_lieu||[]).length;i++){data.vat_lieu[i].is_new=false;await dbPut('vat_lieu',data.vat_lieu[i]);}
+      (data.vat_lieu||[]).forEach(function(v){if(v.nhom&&!ALL_GEWERKE.includes(v.nhom))ALL_GEWERKE.push(v.nhom);});
       var dem=data.dem_app||[];
       var codaiHS=dem.filter(function(r){return r.kieu_tinh==='CO_DAI'&&r.he_so>1;});
       await processDemApp(dem);
@@ -254,6 +255,7 @@ async function doSync(){
         if(!ex||ex.synced!==false){p.synced=true;p.is_new=false;await dbPut('phong',p);}
       }
       for(var i=0;i<(data.vat_lieu||[]).length;i++){data.vat_lieu[i].is_new=false;await dbPut('vat_lieu',data.vat_lieu[i]);}
+      (data.vat_lieu||[]).forEach(function(v){if(v.nhom&&!ALL_GEWERKE.includes(v.nhom))ALL_GEWERKE.push(v.nhom);});
 
       // ---- PULL dem_le từ DEM_APP (sync 2 chiều: Sheet → Device) ----
       // Nếu Sheet bị xóa (trống) → mark tất cả local records là dirty để force push lại

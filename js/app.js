@@ -6,6 +6,8 @@
 // ============================================================
 async function init(){
   try{await openDB();}catch(e){console.error('DB:',e);return;}
+  // Load Gewerke từ vat_lieu đã cache trong IDB (từ lần sync trước)
+  try{var vlCache=await dbGetAll('vat_lieu');vlCache.forEach(function(v){if(v.nhom&&!ALL_GEWERKE.includes(v.nhom))ALL_GEWERKE.push(v.nhom);});}catch(e){}
 
   // MERGE restore: luôn kiểm tra localStorage backup — không chỉ khi IndexedDB trống
   // Fix bug: nếu IndexedDB có dữ liệu cũ (từ Sheet), các record pending/dirty trong backup vẫn cần restore
@@ -69,6 +71,7 @@ async function init(){
       if(data.success){
         for(var i=0;i<(data.phong||[]).length;i++){var p=data.phong[i];var ex=await dbGet('phong',p.id);if(!ex||ex.synced!==false){p.synced=true;p.is_new=false;await dbPut('phong',p);}}
         for(var i=0;i<(data.vat_lieu||[]).length;i++){data.vat_lieu[i].is_new=false;await dbPut('vat_lieu',data.vat_lieu[i]);}
+        (data.vat_lieu||[]).forEach(function(v){if(v.nhom&&!ALL_GEWERKE.includes(v.nhom))ALL_GEWERKE.push(v.nhom);});
         // Quan trọng: cũng cập nhật dem_le từ Sheet — fix dữ liệu sai sau refresh iPad
         await processDemApp(data.dem_app||[]);
         await renderS1();
