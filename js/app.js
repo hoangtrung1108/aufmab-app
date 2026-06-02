@@ -64,19 +64,17 @@ async function init(){
   if(phongs.length===0){
     try{await doSync();}catch(e){console.error('init doSync:',e);} // first run: pull data
   } else {
-    await renderS1();
-    // Background pull if AppScript — update phong, vat_lieu AND dem_le từ Sheet
+    // Pull trước — render sau: đảm bảo Gewerke + vật liệu mới sẵn sàng trước khi user bấm +
     if(IS_GAS){try{
       var js=await gsRun('serverPull');var data=JSON.parse(js);
       if(data.success){
         for(var i=0;i<(data.phong||[]).length;i++){var p=data.phong[i];var ex=await dbGet('phong',p.id);if(!ex||ex.synced!==false){p.synced=true;p.is_new=false;await dbPut('phong',p);}}
         for(var i=0;i<(data.vat_lieu||[]).length;i++){data.vat_lieu[i].is_new=false;await dbPut('vat_lieu',data.vat_lieu[i]);}
         (data.vat_lieu||[]).forEach(function(v){if(v.nhom&&!ALL_GEWERKE.includes(v.nhom))ALL_GEWERKE.push(v.nhom);});
-        // Quan trọng: cũng cập nhật dem_le từ Sheet — fix dữ liệu sai sau refresh iPad
         await processDemApp(data.dem_app||[]);
-        await renderS1();
       }
-    }catch(e){console.log('bg pull:',e);}}
+    }catch(e){console.log('pull err:',e);}}
+    await renderS1();
   }
 }
 loadCustomData(); // Nạp Gewerk & DN tự tạo từ localStorage trước khi init
