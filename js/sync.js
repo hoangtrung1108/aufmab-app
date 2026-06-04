@@ -117,6 +117,43 @@ async function saveAndSync(){
         phong_new:[]
       };
 
+      // Auto re-push: nếu toP rỗng nhưng room có data synced → kiểm tra sheet
+      // Trường hợp: sheet bị xóa tay nhưng local vẫn synced → cần push lại
+      if(toP.length===0&&pendA.length===0){
+        var _hasData=allD.filter(function(r){
+          if(r.deleted||r.sync_status!=='synced')return false;
+          var vals=r.values||[];
+          return vals.length>0&&vals.reduce(function(a,b){return a+evalVal(b);},0)>0;
+        });
+        if(_hasData.length>0){
+          btn.textContent='Checking sheet...';
+          try{
+            var _chkJs=await gsRun('serverPull');
+            var _chkData=JSON.parse(_chkJs);
+            var _sheetRoom=(_chkData.dem_app||[]).filter(function(r){return r.ma_phong===curPhong.ma_phong;});
+            if(_sheetRoom.length===0){
+              // Sheet trống cho room này — reset + re-push tất cả
+              for(var _i=0;_i<_hasData.length;_i++){
+                _hasData[_i].sync_status='dirty';_hasData[_i].sheet_id=null;
+                await dbPut('dem_le',_hasData[_i]);
+              }
+              toP=_hasData;
+              // Re-sort
+              toP.sort(function(a,b){
+                var ai=ALL_GEWERKE.indexOf(a.nhom||'');if(ai<0)ai=999;
+                var bi=ALL_GEWERKE.indexOf(b.nhom||'');if(bi<0)bi=999;
+                if(ai!==bi)return ai-bi;
+                var ag=_grNum(a.grosse),bg=_grNum(b.grosse);if(ag!==bg)return bg-ag;
+                var ak=_vlMap[(a.nhom||'')+'|'+(a.ten_vl_german||'')]||999;
+                var bk=_vlMap[(b.nhom||'')+'|'+(b.ten_vl_german||'')]||999;
+                return ak-bk;
+              });
+              toast('⚡ Sheet trống — re-push '+toP.length+' records...');
+            }
+          }catch(_e){console.log('sheet check:',_e);}
+        }
+      }
+
       if(toP.length===0&&pendA.length===0){
         toast('✓ Không có dữ liệu mới — đã đồng bộ hết rồi');
       } else {
