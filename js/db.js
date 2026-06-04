@@ -30,6 +30,8 @@ function dbGetAll(s){return new Promise(function(ok,fail){var tx=db.transaction(
 function dbGet(s,k){return new Promise(function(ok,fail){var tx=db.transaction(s,'readonly');var r=tx.objectStore(s).get(k);r.onsuccess=function(){ok(r.result);};r.onerror=function(e){fail(e.target.error);}});}
 function dbIdx(s,idx,v){return new Promise(function(ok,fail){var tx=db.transaction(s,'readonly');var r=tx.objectStore(s).index(idx).getAll(v);r.onsuccess=function(){ok(r.result);};r.onerror=function(e){fail(e.target.error);}});}
 function uuid(){return 'xxxx-xxxx-xxxx'.replace(/x/g,function(){return(Math.random()*16|0).toString(16)});}
+// Parse Große → số để sort (DN25→25, M10→10, Befestigung→0)
+function _grNum(g){var m=(g||'').match(/\d+/);return m?parseInt(m[0]):0;}
 function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2000);}
 function initGewerkChips(){

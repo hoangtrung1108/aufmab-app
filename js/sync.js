@@ -77,17 +77,17 @@ async function saveAndSync(){
         return total>0;
       });
 
-      // Sort: oldest card first, then nhom → grosse → ten_vl_german
-      var _cm2={};
-      toP.forEach(function(r){var cid=r.card_id||r.ma_phong;if(!_cm2[cid]||r.created_at<_cm2[cid])_cm2[cid]=r.created_at||0;});
+      // Sort: Gewerk (ALL_GEWERKE order) → Große (numeric giảm dần) → Ten_VL_German (CONG_VIEC order)
+      var _vlArr=await dbGetAll('vat_lieu');
+      var _vlMap={};_vlArr.forEach(function(v,i){_vlMap[(v.nhom||'')+'|'+(v.ten_vl_german||'')]=i;});
       toP.sort(function(a,b){
-        var ca=a.card_id||a.ma_phong,cb=b.card_id||b.ma_phong;
-        var ta=_cm2[ca]||0,tb=_cm2[cb]||0;
-        if(ta!==tb)return ta-tb;
-        if(ca!==cb)return ca.localeCompare(cb);
-        var nc=(a.nhom||'').localeCompare(b.nhom||'');if(nc)return nc;
-        var gc=(a.grosse||'').localeCompare(b.grosse||'');if(gc)return gc;
-        return(a.ten_vl_german||'').localeCompare(b.ten_vl_german||'');
+        var ai=ALL_GEWERKE.indexOf(a.nhom||'');if(ai<0)ai=999;
+        var bi=ALL_GEWERKE.indexOf(b.nhom||'');if(bi<0)bi=999;
+        if(ai!==bi)return ai-bi;
+        var ag=_grNum(a.grosse),bg=_grNum(b.grosse);if(ag!==bg)return bg-ag;
+        var ak=_vlMap[(a.nhom||'')+'|'+(a.ten_vl_german||'')]||999;
+        var bk=_vlMap[(b.nhom||'')+'|'+(b.ten_vl_german||'')]||999;
+        return ak-bk;
       });
 
       // Build anh_urls_by_room for this single room
@@ -308,17 +308,17 @@ async function doSync(){
       var allD=await dbGetAll('dem_le');
       var toP=allD.filter(function(r){return!r.deleted&&(r.sync_status==='pending'||r.sync_status==='dirty');});
 
-      // Fix 1: Sort — oldest card first, then nhom → grosse → ten_vl_german
-      var _cmin={};
-      toP.forEach(function(r){var cid=r.card_id||r.ma_phong;if(!_cmin[cid]||r.created_at<_cmin[cid])_cmin[cid]=r.created_at||0;});
+      // Sort: Gewerk (ALL_GEWERKE order) → Große (numeric giảm dần) → Ten_VL_German (CONG_VIEC order)
+      var _vlArr2=await dbGetAll('vat_lieu');
+      var _vlMap2={};_vlArr2.forEach(function(v,i){_vlMap2[(v.nhom||'')+'|'+(v.ten_vl_german||'')]=i;});
       toP.sort(function(a,b){
-        var ca=a.card_id||a.ma_phong,cb=b.card_id||b.ma_phong;
-        var ta=_cmin[ca]||0,tb=_cmin[cb]||0;
-        if(ta!==tb)return ta-tb;
-        if(ca!==cb)return ca.localeCompare(cb);
-        var nc=(a.nhom||'').localeCompare(b.nhom||'');if(nc)return nc;
-        var gc=(a.grosse||'').localeCompare(b.grosse||'');if(gc)return gc;
-        return(a.ten_vl_german||'').localeCompare(b.ten_vl_german||'');
+        var ai=ALL_GEWERKE.indexOf(a.nhom||'');if(ai<0)ai=999;
+        var bi=ALL_GEWERKE.indexOf(b.nhom||'');if(bi<0)bi=999;
+        if(ai!==bi)return ai-bi;
+        var ag=_grNum(a.grosse),bg=_grNum(b.grosse);if(ag!==bg)return bg-ag;
+        var ak=_vlMap2[(a.nhom||'')+'|'+(a.ten_vl_german||'')]||999;
+        var bk=_vlMap2[(b.nhom||'')+'|'+(b.ten_vl_german||'')]||999;
+        return ak-bk;
       });
 
       var allV=await dbGetAll('vat_lieu');var newV=allV.filter(function(v){return v.is_new;});

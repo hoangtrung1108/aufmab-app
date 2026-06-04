@@ -317,12 +317,27 @@ async function renderS2(){
   var records=await dbIdx('dem_le','ma_phong',curPhong.ma_phong);
   records=records.filter(function(r){return!r.deleted;});
 
+  // Build vat_lieu order map: nhom|ten_vl_german → index (thứ tự từ CONG_VIEC)
+  var vlArr=await dbGetAll('vat_lieu');
+  var vlOrderMap={};
+  vlArr.forEach(function(v,i){vlOrderMap[(v.nhom||'')+'|'+(v.ten_vl_german||'')]=i;});
+
   var tree={}; // nhom -> grosse -> [records]
   records.forEach(function(r){
     var g=r.nhom||'Sonstige';var dn=r.grosse||'?';
     if(!tree[g])tree[g]={};
     if(!tree[g][dn])tree[g][dn]=[];
     tree[g][dn].push(r);
+  });
+  // Sắp xếp materials trong mỗi DN theo thứ tự vat_lieu (CONG_VIEC order)
+  Object.keys(tree).forEach(function(gew){
+    Object.keys(tree[gew]).forEach(function(dn){
+      tree[gew][dn].sort(function(a,b){
+        var ak=vlOrderMap[(a.nhom||'')+'|'+(a.ten_vl_german||'')]||999;
+        var bk=vlOrderMap[(b.nhom||'')+'|'+(b.ten_vl_german||'')]||999;
+        return ak-bk;
+      });
+    });
   });
 
   // Tính tổng theo Gewerk và grand total (raw × he_so)
@@ -332,7 +347,7 @@ async function renderS2(){
     Object.keys(dns).forEach(function(dn){
       dns[dn].forEach(function(r){
         var vals=r.values||[];if(!vals.length)return;
-        var raw=vals.reduce(function(a,b){return a+Number(b);},0);
+        var raw=vals.reduce(function(a,b){return a+evalVal(b);},0); // fix: evalVal thay Number
         t+=raw*(r.he_so||1);
       });
     });
@@ -344,7 +359,12 @@ async function renderS2(){
   }
 
   var c=document.getElementById('s2Body');c.innerHTML='';
-  var gewerke=Object.keys(tree).sort();
+  // Gewerk theo thứ tự ALL_GEWERKE; unknown gewerke append cuối
+  var gewerke=Object.keys(tree).sort(function(a,b){
+    var ai=ALL_GEWERKE.indexOf(a);if(ai<0)ai=999;
+    var bi=ALL_GEWERKE.indexOf(b);if(bi<0)bi=999;
+    return ai-bi;
+  });
 
   if(gewerke.length===0){
     c.innerHTML='<div style="padding:30px;text-align:center;color:#999">Noch keine Daten.<br>Dr\u00fccke "+ Gewerk / DN"<br>z.B. L\u00fcftung + DN100</div>';
@@ -367,7 +387,8 @@ async function renderS2(){
   gewerke.forEach(function(gew){
     var sec=document.createElement('div');sec.className='gew-sec';
     var hdr=document.createElement('div');hdr.className='gew-hdr '+gewCls(gew);
-    var dns=Object.keys(tree[gew]).sort();
+    // DN giảm dần theo số (DN32 → DN25 → DN20 → DN15; Befestigung/M10 cuối)
+    var dns=Object.keys(tree[gew]).sort(function(a,b){return _grNum(b)-_grNum(a);});
     var dnCount=dns.length;
 
     // Header: [Gewerk name] [flex] [+DN] [count▼] [×]
