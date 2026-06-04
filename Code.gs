@@ -375,42 +375,24 @@ function writeDemLe(ss, records, anhUrlsByRoom) {
     var sheetId = rec.sheet_id || generateId(rec.ma_phong);
 
     // Calculate So_Luong and Chieu_Dai from values array
-    // Multi-value → write as formula "=5+1+1" so Sheet shows sum but formula is visible on click
+    // Luôn tính ra số — tránh lỗi #NUM! do locale Đức dùng dấu phẩy làm decimal
     var soLuong = "";
     var chieuDai = "";
     var vals = rec.values || [];
     var hesoVal = rec.he_so || 1;
     if (vals.length > 0) {
+      // evalNum: tính giá trị từ expression string (e.g. "1.3+1.3" → 2.6)
+      var evalNum = function(v) {
+        var s = String(v == null ? 0 : v).replace(/[^0-9+\-*/().\s]/g, '');
+        if (!s.trim()) return 0;
+        try { var r = Function('"use strict";return(' + s + ')')(); return (isFinite(r) && r >= 0) ? r : 0; } catch(e) { return 0; }
+      };
+      var total = 0;
+      for (var vi = 0; vi < vals.length; vi++) total += evalNum(vals[vi]);
       if (rec.kieu_tinh === "CHI_DEM") {
-        if (vals.length === 1) {
-          var v0 = vals[0];
-          if (typeof v0 === 'string' && /[+\-*/()]/.test(v0)) {
-            soLuong = '=' + v0; // expression → ghi công thức, Sheet tự tính
-          } else {
-            var n = Number(v0);
-            soLuong = (n === Math.floor(n)) ? Math.floor(n) : Math.round(n * 100) / 100;
-          }
-        } else {
-          soLuong = '=' + vals.map(function(v){
-            if (typeof v === 'string') return v; // giữ expression string nguyên
-            var n = Number(v);
-            return (n === Math.floor(n)) ? Math.floor(n) : Math.round(n * 100) / 100;
-          }).join('+');
-        }
+        soLuong = (total === Math.floor(total)) ? Math.floor(total) : Math.round(total * 100) / 100;
       } else if (rec.kieu_tinh === "CO_DAI") {
-        if (vals.length === 1) {
-          var v0 = vals[0];
-          if (typeof v0 === 'string' && /[+\-*/()]/.test(v0)) {
-            chieuDai = '=' + v0;
-          } else {
-            chieuDai = Math.round(Number(v0) * 10) / 10;
-          }
-        } else {
-          chieuDai = '=' + vals.map(function(v){
-            if (typeof v === 'string') return v;
-            return Math.round(Number(v)*100)/100;
-          }).join('+');
-        }
+        chieuDai = Math.round(total * 100) / 100;
         soLuong = hesoVal; // số lượng tuyến (×1/2/3/4)
       }
     }

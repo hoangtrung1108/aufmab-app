@@ -67,17 +67,17 @@ async function saveAndSync(){
       // Step 2: Build dem_le records
       btn.textContent='Syncing data...';
       var allD=await dbIdx('dem_le','ma_phong',curPhong.ma_phong);
-      // Chỉ push pending/dirty — KHÔNG push synced (tránh tạo row trùng trong Sheet)
+      // Push TẤT CẢ records có data (kể cả synced)
+      // GAS writeDemLe dùng UPSERT: sheet_id tồn tại → UPDATE row, không có → INSERT mới
+      // → an toàn, không tạo duplicate; đảm bảo không mất data khi sheet bị xóa tay
       var toP=allD.filter(function(r){
         if(r.deleted)return false;
-        if(r.sync_status==='synced')return false; // đã sync rồi, bỏ qua
         var vals=r.values||[];
         if(vals.length===0)return false;
-        var total=vals.reduce(function(a,b){return a+evalVal(b);},0);
-        return total>0;
+        return vals.reduce(function(a,b){return a+evalVal(b);},0)>0;
       });
 
-      // Sort: Gewerk (ALL_GEWERKE order) → Große (numeric giảm dần) → Ten_VL_German (CONG_VIEC order)
+      // Sort: Gewerk → Große giảm dần → Ten_VL_German (CONG_VIEC order)
       var _vlArr=await dbGetAll('vat_lieu');
       var _vlMap={};_vlArr.forEach(function(v,i){_vlMap[(v.nhom||'')+'|'+(v.ten_vl_german||'')]=i;});
       toP.sort(function(a,b){
@@ -90,10 +90,9 @@ async function saveAndSync(){
         return ak-bk;
       });
 
-      // Build anh_urls_by_room for this single room
+      // Build payload SAU sort
       var anhUrlsByRoom2={};
       anhUrlsByRoom2[curPhong.ma_phong]=allAnh;
-
       var payload={
         dem_le: toP.map(function(r){
           return {
@@ -117,45 +116,8 @@ async function saveAndSync(){
         phong_new:[]
       };
 
-      // Auto re-push: nếu toP rỗng nhưng room có data synced → kiểm tra sheet
-      // Trường hợp: sheet bị xóa tay nhưng local vẫn synced → cần push lại
       if(toP.length===0&&pendA.length===0){
-        var _hasData=allD.filter(function(r){
-          if(r.deleted||r.sync_status!=='synced')return false;
-          var vals=r.values||[];
-          return vals.length>0&&vals.reduce(function(a,b){return a+evalVal(b);},0)>0;
-        });
-        if(_hasData.length>0){
-          btn.textContent='Checking sheet...';
-          try{
-            var _chkJs=await gsRun('serverPull');
-            var _chkData=JSON.parse(_chkJs);
-            var _sheetRoom=(_chkData.dem_app||[]).filter(function(r){return r.ma_phong===curPhong.ma_phong;});
-            if(_sheetRoom.length===0){
-              // Sheet trống cho room này — reset + re-push tất cả
-              for(var _i=0;_i<_hasData.length;_i++){
-                _hasData[_i].sync_status='dirty';_hasData[_i].sheet_id=null;
-                await dbPut('dem_le',_hasData[_i]);
-              }
-              toP=_hasData;
-              // Re-sort
-              toP.sort(function(a,b){
-                var ai=ALL_GEWERKE.indexOf(a.nhom||'');if(ai<0)ai=999;
-                var bi=ALL_GEWERKE.indexOf(b.nhom||'');if(bi<0)bi=999;
-                if(ai!==bi)return ai-bi;
-                var ag=_grNum(a.grosse),bg=_grNum(b.grosse);if(ag!==bg)return bg-ag;
-                var ak=_vlMap[(a.nhom||'')+'|'+(a.ten_vl_german||'')]||999;
-                var bk=_vlMap[(b.nhom||'')+'|'+(b.ten_vl_german||'')]||999;
-                return ak-bk;
-              });
-              toast('⚡ Sheet trống — re-push '+toP.length+' records...');
-            }
-          }catch(_e){console.log('sheet check:',_e);}
-        }
-      }
-
-      if(toP.length===0&&pendA.length===0){
-        toast('✓ Không có dữ liệu mới — đã đồng bộ hết rồi');
+        toast('✓ Không có dữ liệu — chưa nhập gì cho phòng này');
       } else {
         var pjs=await gsRun('serverPush',JSON.stringify(payload));
         var res=JSON.parse(pjs);
