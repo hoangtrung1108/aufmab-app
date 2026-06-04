@@ -73,7 +73,7 @@ async function saveAndSync(){
         if(r.sync_status==='synced')return false; // đã sync rồi, bỏ qua
         var vals=r.values||[];
         if(vals.length===0)return false;
-        var total=vals.reduce(function(a,b){return a+Number(b);},0);
+        var total=vals.reduce(function(a,b){return a+evalVal(b);},0);
         return total>0;
       });
 
@@ -160,8 +160,17 @@ var IS_GAS = (location.hostname !== 'localhost' && location.hostname !== '127.0.
 async function processDemApp(demAppData){
   if(!demAppData||demAppData.length===0)return 0;
   var allLocal=await dbGetAll('dem_le');
+  // Index 1: by sheet_id (existing synced records)
   var bySheetId={};
   allLocal.forEach(function(d){if(d.sheet_id)bySheetId[d.sheet_id]=d;});
+  // Index 2: by combo key (pending/dirty records without sheet_id) — dùng để merge thay vì tạo duplicate
+  var byCombo={};
+  allLocal.forEach(function(d){
+    if(!d.sheet_id&&!d.deleted){
+      var k=d.ma_phong+'|'+(d.nhom||'')+'|'+(d.grosse||'')+'|'+(d.ten_vl_german||'');
+      if(!byCombo[k])byCombo[k]=d; // giữ record đầu tiên
+    }
+  });
   var count=0;
   for(var i=0;i<demAppData.length;i++){
     var row=demAppData[i];
@@ -169,18 +178,43 @@ async function processDemApp(demAppData){
     if((row.values||[]).length===0)continue;
     var local=bySheetId[row.sheet_id];
     if(!local){
-      var newRec={
-        local_id:uuid(),sheet_id:row.sheet_id,
-        ma_phong:row.ma_phong,nhom:row.nhom||'',
-        ten_vl_german:row.ten_vl_german,grosse:row.grosse||'',
-        he_so:row.he_so||1,values:row.values,
-        kieu_tinh:row.kieu_tinh,don_vi:row.don_vi||'',
-        ghi_chu:row.ghi_chu||'',card_id:row.card_id||row.ma_phong+'|'+(row.nhom||''),
-        card_note:'',sync_status:'synced',deleted:false,
-        created_at:Date.now(),updated_at:Date.now()
-      };
-      await dbPut('dem_le',newRec);
-      bySheetId[row.sheet_id]=newRec;count++;
+      // Không tìm thấy qua sheet_id — kiểm tra pending local record cùng material/phòng/DN
+      var comboKey=row.ma_phong+'|'+(row.nhom||'')+'|'+(row.grosse||'')+'|'+row.ten_vl_german;
+      var pendingLocal=byCombo[comboKey];
+      if(pendingLocal){
+        // MERGE: gán sheet_id cho pending record thay vì tạo mới → tránh duplicate
+        pendingLocal.sheet_id=row.sheet_id;
+        pendingLocal.card_id=row.card_id||pendingLocal.card_id||'';
+        if(row.kieu_tinh)pendingLocal.kieu_tinh=row.kieu_tinh;
+        if(row.don_vi)pendingLocal.don_vi=row.don_vi;
+        if(row.he_so&&(pendingLocal.he_so||1)===1)pendingLocal.he_so=row.he_so;
+        // Nếu local chưa có data → lấy từ sheet; nếu đã có data → giữ nguyên (user's input)
+        var localTotal=(pendingLocal.values||[]).reduce(function(a,b){return a+evalVal(b);},0);
+        if(localTotal===0)pendingLocal.values=row.values;
+        // Chỉ mark synced nếu local values = sheet values (tức là chưa thay đổi)
+        var sheetTotal=(row.values||[]).reduce(function(a,b){return a+evalVal(b);},0);
+        var newLocalTotal=(pendingLocal.values||[]).reduce(function(a,b){return a+evalVal(b);},0);
+        if(Math.abs(sheetTotal-newLocalTotal)<0.001)pendingLocal.sync_status='synced';
+        pendingLocal.updated_at=Date.now();
+        await dbPut('dem_le',pendingLocal);
+        bySheetId[row.sheet_id]=pendingLocal;
+        delete byCombo[comboKey]; // đã merge rồi, không merge lần nữa
+        count++;
+      } else {
+        // Không có local pending nào → tạo record mới từ sheet
+        var newRec={
+          local_id:uuid(),sheet_id:row.sheet_id,
+          ma_phong:row.ma_phong,nhom:row.nhom||'',
+          ten_vl_german:row.ten_vl_german,grosse:row.grosse||'',
+          he_so:row.he_so||1,values:row.values,
+          kieu_tinh:row.kieu_tinh,don_vi:row.don_vi||'',
+          ghi_chu:row.ghi_chu||'',card_id:row.card_id||row.ma_phong+'|'+(row.nhom||''),
+          card_note:'',sync_status:'synced',deleted:false,
+          created_at:Date.now(),updated_at:Date.now()
+        };
+        await dbPut('dem_le',newRec);
+        bySheetId[row.sheet_id]=newRec;count++;
+      }
     } else {
       var changed=false;
       // card_id — luôn update từ Sheet (giữ đúng multi-gewerk grouping)
