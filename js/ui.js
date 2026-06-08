@@ -256,11 +256,15 @@ function updateDNTotalCount(){
 var s3Items=[];
 var s3HaltMats=[];var s3SelectedHaltMats=new Set();
 
+// Halterung & Befestigung là CÙNG 1 nhóm phụ kiện (Sheet CONG_VIEC ghi 'Befestigung')
+function isHaltNhom(n){return n==='Halterung'||n==='Befestigung';}
+
 async function goToS3(){
   var manualDN=document.getElementById('nGewDN').value.trim();
   var allVL=await dbGetAll('vat_lieu');
   var items=[];
   bsGewActiveGewerke.forEach(function(gew){
+    if(isHaltNhom(gew))return; // Halterung/Befestigung xử lý ở block phụ kiện bên dưới, không cần DN
     var dns=Array.from(selectedDNsPerGew[gew]||[]);
     if(manualDN&&!dns.includes(manualDN))dns.push(manualDN);
     if(dns.length===0)return; // bỏ qua gewerk không chọn DN nào
@@ -270,21 +274,26 @@ async function goToS3(){
     if(unique.length===0)unique=[{ma_vl:'VL_'+gew+'_ROHR',ten_vl_german:'Rohr',don_vi:'m',kieu_tinh:'CO_DAI',nhom:gew}];
     items.push({nhom:gew,dns:dns,mats:unique,selectedMats:new Set(unique.map(function(v){return v.ma_vl||v.ten_vl_german;}))});
   });
-  if(items.length===0){toast('Bitte DN auswählen');return;}
 
-  // Halterung — hiện nếu ít nhất 1 gewerk không phải Halterung
-  var hasNonHalt=items.some(function(it){return it.nhom!=='Halterung';});
-  var haltMats=allVL.filter(function(v){return v.nhom==='Halterung';});
-  if(haltMats.length===0)haltMats=MOCK_VL.filter(function(v){return v.nhom==='Halterung';});
+  // Block phụ kiện Halterung/Befestigung — lấy TOÀN BỘ từ Sheet (nhom='Befestigung' hoặc 'Halterung')
+  var userWantsHalt=bsGewActiveGewerke.some(function(g){return isHaltNhom(g);});
+  var hasPipe=items.length>0;
+  var haltMats=allVL.filter(function(v){return isHaltNhom(v.nhom);});
+  if(haltMats.length===0)haltMats=MOCK_VL.filter(function(v){return isHaltNhom(v.nhom);});
   var seenH={};var uniqH=[];
   haltMats.forEach(function(v){if(!seenH[v.ten_vl_german]){seenH[v.ten_vl_german]=true;uniqH.push(v);}});
 
   s3Items=items;
-  s3HaltMats=hasNonHalt?uniqH:[];
-  s3SelectedHaltMats=new Set(uniqH.map(function(v){return v.ma_vl||v.ten_vl_german;}));
+  // Hiện block phụ kiện nếu user chọn Halterung/Befestigung HOẶC có ống (phụ kiện đi kèm)
+  s3HaltMats=(userWantsHalt||hasPipe)?uniqH:[];
+  s3SelectedHaltMats=new Set(s3HaltMats.map(function(v){return v.ma_vl||v.ten_vl_german;}));
+
+  if(items.length===0&&s3HaltMats.length===0){toast('Bitte DN auswählen');return;}
 
   closeSheet('Gew');showScreen('s3');
-  var gewNames=items.map(function(it){return it.nhom;}).join(', ');
+  var gewNames=items.map(function(it){return it.nhom;});
+  if(s3HaltMats.length>0)gewNames.push('Befestigung');
+  gewNames=gewNames.join(', ');
   var totalDN=items.reduce(function(s,it){return s+it.dns.length;},0);
   document.getElementById('s3Title').textContent=gewNames;
   document.getElementById('s3Info').textContent='\u2705 '+items.length+' Gewerk \u00b7 '+totalDN+' DN \u2014 Bỏ tick cấu kiện không cần';
@@ -389,10 +398,9 @@ async function confirmMaterials(){
       }
     }
 
-    // Halterung (Befestigung) — tạo 1 lần nếu có
+    // Halterung (Befestigung) — tạo 1 lần nếu có (goToS3 đã quyết định s3HaltMats)
     var haltAdded=0;
-    var hasNonHalt=s3Items.some(function(it){return it.nhom!=='Halterung';});
-    if(hasNonHalt&&s3HaltMats.length>0){
+    if(s3HaltMats.length>0){
       var selHalt=s3HaltMats.filter(function(v){return s3SelectedHaltMats.has(v.ma_vl||v.ten_vl_german);});
       for(var j=0;j<selHalt.length;j++){
         var h=selHalt[j];

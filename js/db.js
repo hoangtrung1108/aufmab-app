@@ -30,6 +30,20 @@ function dbPut(s,d){return new Promise(function(ok,fail){var tx=db.transaction(s
 function dbGetAll(s){return new Promise(function(ok,fail){var tx=db.transaction(s,'readonly');var r=tx.objectStore(s).getAll();r.onsuccess=function(){ok(r.result);};r.onerror=function(e){fail(e.target.error);}});}
 function dbGet(s,k){return new Promise(function(ok,fail){var tx=db.transaction(s,'readonly');var r=tx.objectStore(s).get(k);r.onsuccess=function(){ok(r.result);};r.onerror=function(e){fail(e.target.error);}});}
 function dbIdx(s,idx,v){return new Promise(function(ok,fail){var tx=db.transaction(s,'readonly');var r=tx.objectStore(s).index(idx).getAll(v);r.onsuccess=function(){ok(r.result);};r.onerror=function(e){fail(e.target.error);}});}
+function dbDel(s,k){return new Promise(function(ok,fail){var tx=db.transaction(s,'readwrite');tx.objectStore(s).delete(k);tx.oncomplete=ok;tx.onerror=function(e){fail(e.target.error);}});}
+// Ghi vat_lieu từ Sheet về sao cho store khớp ĐÚNG với Sheet:
+// xóa các record cũ KHÔNG phải do user tự thêm (is_new) và không còn trong list mới,
+// sau đó upsert toàn bộ list mới. → vật liệu bị đổi tên/xóa trên Sheet sẽ biến mất khỏi app.
+async function syncVatLieu(freshList){
+  if(!freshList||!freshList.length)return;
+  var keep={};freshList.forEach(function(v){if(v.ma_vl)keep[v.ma_vl]=true;});
+  var existing=await dbGetAll('vat_lieu');
+  for(var i=0;i<existing.length;i++){
+    var e=existing[i];
+    if(!e.is_new&&!keep[e.ma_vl])await dbDel('vat_lieu',e.ma_vl); // record cũ từ Sheet, không còn nữa
+  }
+  for(var j=0;j<freshList.length;j++){freshList[j].is_new=false;await dbPut('vat_lieu',freshList[j]);}
+}
 function uuid(){return 'xxxx-xxxx-xxxx'.replace(/x/g,function(){return(Math.random()*16|0).toString(16)});}
 // Parse Große → số để sort (DN25→25, M10→10, Befestigung→0)
 function _grNum(g){var m=(g||'').match(/\d+/);return m?parseInt(m[0]):0;}

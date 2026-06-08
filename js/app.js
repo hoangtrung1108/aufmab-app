@@ -69,7 +69,7 @@ async function init(){
       var js=await gsRun('serverPull');var data=JSON.parse(js);
       if(data.success){
         for(var i=0;i<(data.phong||[]).length;i++){var p=data.phong[i];var ex=await dbGet('phong',p.id);if(!ex||ex.synced!==false){p.synced=true;p.is_new=false;await dbPut('phong',p);}}
-        for(var i=0;i<(data.vat_lieu||[]).length;i++){data.vat_lieu[i].is_new=false;await dbPut('vat_lieu',data.vat_lieu[i]);}
+        await syncVatLieu(data.vat_lieu||[]);
         (data.vat_lieu||[]).forEach(function(v){if(v.nhom&&!ALL_GEWERKE.includes(v.nhom))ALL_GEWERKE.push(v.nhom);});
         await processDemApp(data.dem_app||[]);
       }
