@@ -276,7 +276,7 @@ async function goToS3(){
   });
 
   // Block phụ kiện Halterung/Befestigung — lấy TOÀN BỘ từ Sheet (nhom='Befestigung' hoặc 'Halterung')
-  var userWantsHalt=bsGewActiveGewerke.some(function(g){return isHaltNhom(g);});
+  var userWantsHalt=Array.from(bsGewActiveGewerke).some(function(g){return isHaltNhom(g);});
   var hasPipe=items.length>0;
   var haltMats=allVL.filter(function(v){return isHaltNhom(v.nhom);});
   if(haltMats.length===0)haltMats=MOCK_VL.filter(function(v){return isHaltNhom(v.nhom);});
