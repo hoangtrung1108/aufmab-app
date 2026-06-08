@@ -559,13 +559,18 @@ function buildMR(rec){
       ['(',')','×','÷','+','-'].forEach(function(op){
         var btn=document.createElement('button');btn.type='button';btn.className='mr-op-btn';
         btn.textContent=op;
-        btn.onmousedown=function(e){
-          e.preventDefault(); // không blur input
+        // iOS: dùng ontouchstart + e.preventDefault() để chặn blur TRƯỚC khi iOS trigger nó
+        // Desktop: onmousedown + e.preventDefault() là đủ
+        function insertOp(e){
+          e.preventDefault();e.stopPropagation();
           var char=op==='×'?'*':op==='÷'?'/':op;
-          var s=inp.selectionStart,en=inp.selectionEnd;
+          var s=inp.selectionStart||inp.value.length;
+          var en=inp.selectionEnd||inp.value.length;
           inp.value=inp.value.slice(0,s)+char+inp.value.slice(en);
           inp.setSelectionRange(s+1,s+1);inp.focus();
-        };
+        }
+        btn.ontouchstart=insertOp;  // iOS — fires before blur
+        btn.onmousedown=function(e){e.preventDefault();}; // desktop — prevent blur only
         opRow.appendChild(btn);
       });
       box.appendChild(opRow);
@@ -609,7 +614,9 @@ function buildMR(rec){
       inp.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();save();}if(e.key==='Escape'){renderBox(false);}};
       inp.onblur=function(e){
         var rel=e.relatedTarget;
+        // Không save() nếu blur do tap vào: nút +5/+1/+m HOẶC operator buttons
         if(rel&&(rel.textContent==='+5'||rel.textContent==='+1'||rel.textContent==='+m'))return;
+        if(rel&&rel.classList&&rel.classList.contains('mr-op-btn'))return;
         save();
       };
     } else {

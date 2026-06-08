@@ -5,7 +5,8 @@
 // Used by render.js (display total) and sync.js (comparison)
 function evalVal(v){
   if(typeof v==='number')return v;
-  var c=String(v).replace(/[^0-9+\-*/().\s]/g,'');
+  // Normalize: dấu ',' decimal (locale Đức/Việt) → '.' trước khi eval
+  var c=String(v).replace(/(\d),(\d)/g,'$1.$2').replace(/[^0-9+\-*/().\s]/g,'');
   if(!c.trim())return 0;
   try{var r=Function('"use strict";return('+c+')')();return(isFinite(r)&&r>=0)?r:0;}catch(e){return 0;}
 }

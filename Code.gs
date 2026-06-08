@@ -13,14 +13,16 @@ var DRIVE_FOLDER_ID = "1W1aM9cSVX2u1PXtjEhPN0OxC4329OE1u";
 function parseFormulaString(raw) {
   var clean = String(raw || '').trim();
   if (!clean) return [];
-  // Chỉ có phép cộng số dương → split thành array
-  if (/^[\d.\s+]+$/.test(clean)) {
-    return clean.split('+')
+  // Normalize: ','  làm decimal (German/Vietnamese locale) → '.'
+  var normalized = clean.replace(/(\d),(\d)/g, '$1.$2');
+  // Chỉ có phép cộng số dương → split thành array số
+  if (/^[\d.\s+]+$/.test(normalized)) {
+    return normalized.split('+')
       .map(function(s){ return parseFloat(s.trim()); })
       .filter(function(n){ return !isNaN(n) && n > 0; });
   }
-  // Expression phức tạp → giữ nguyên string
-  return [clean];
+  // Expression phức tạp → trả về string đã normalize
+  return [normalized];
 }
 
 // Sheet DEM_APP — output của app (A-N, 14 cột):
@@ -143,20 +145,29 @@ function serverPull() {
       var maPhong = String(r[1] || '').trim();
       if (!sheetId || !maPhong) continue;
 
-      // Parse values: formula (=5+1+1 or =3.5+2.0) → array; fallback to single number
+      // Parse values: formula (=5+1+1) → array; text chain ("1.3+1.3") → string; fallback number
       var fG = String(f[6] || '').trim(); // col G formula (CHI_DEM)
       var fH = String(f[7] || '').trim(); // col H formula (CO_DAI)
+      var rG = String(r[6] || '').trim(); // col G value
+      var rH = String(r[7] || '').trim(); // col H value (có thể là text chain "1.0+0.4+...")
       var vals = [];
       var isCoDai = false;
       if (fH && fH.charAt(0) === '=') {
-        // CO_DAI with formula: =3.5+2.0 or =(3.5+2)*1.5
+        // CO_DAI: formula string (cũ)
         isCoDai = true;
         vals = parseFormulaString(fH.slice(1));
+      } else if (rH && rH.indexOf('+') > 0 && /^[\d.,\s+]+$/.test(rH)) {
+        // CO_DAI: text chain "1.0+0.4+3.1+..." (mới — không có = )
+        isCoDai = true;
+        vals = parseFormulaString(rH); // parseFormulaString normalize ',' → '.' rồi split
       } else if (fG && fG.charAt(0) === '=') {
-        // CHI_DEM with formula: =5+1+1 or =3*4 or =(2+3)*4
+        // CHI_DEM: formula string
         vals = parseFormulaString(fG.slice(1));
+      } else if (rG && rG.indexOf('+') > 0 && /^[\d.,\s+]+$/.test(rG)) {
+        // CHI_DEM: text chain "1+1+1+..."
+        vals = parseFormulaString(rG);
       } else {
-        // Legacy: plain numbers in cells
+        // Legacy: plain numbers
         var chieuDaiNum = Number(r[7]) || 0;
         var soLuongNum  = Number(r[6]) || 0;
         if (chieuDaiNum > 0) { vals = [chieuDaiNum]; isCoDai = true; }
@@ -327,17 +338,47 @@ function serverUploadImage(jsonStr) {
   }
 }
 
+// ---- Helper: tính giá trị từ số hoặc expression string (ngoài writeDemLe để tránh re-declare trong loop) ----
+// Hỗ trợ: số, "1.3+1.3", "6*2", "4*2+16+3*2", "1.6*2*2+0.5*2+0.4*2"
+function calcExprVal(v) {
+  if (typeof v === 'number' && isFinite(v)) return v;
+  var s = String(v || '').replace(/(\d),(\d)/g, '$1.$2').replace(/\s/g, '');
+  if (!s) return 0;
+  var total = 0;
+  var terms = s.split('+');
+  for (var ti = 0; ti < terms.length; ti++) {
+    if (!terms[ti]) continue;
+    var factors = terms[ti].split('*');
+    var prod = 1;
+    var ok = true;
+    for (var fi = 0; fi < factors.length; fi++) {
+      var n = parseFloat(factors[fi]);
+      if (isNaN(n) || !isFinite(n)) { ok = false; break; }
+      prod = prod * n;
+    }
+    if (ok && isFinite(prod)) total = total + prod;
+  }
+  return (isFinite(total) && !isNaN(total)) ? Math.round(total * 100) / 100 : 0;
+}
+
 // ---- Write DEM_LE ----
-// Columns A-O (15 cols):
-// A:ID  B:Ma_Phong  C:Ma_LoaiCV  D:Ten_VL_German  E:Große
-// F:He_So  G:So_Luong  H:Chieu_Dai  I:Ngay_Gio  J:Don_vi
-// K:Nguoi_Dem  L:Anh_Hien_Truong  M:Ghi_Chu  N:Ten_Anh_Mong_Muon  O:Card_ID
-//
-// Card_ID (col O) lưu card_id gốc từ app (vd "040|Heizung+Kälte|note")
-// → dùng khi pull về để ghép đúng multi-gewerk thẻ
 function writeDemLe(ss, records, anhUrlsByRoom) {
   // anhUrlsByRoom: {ma_phong: [{drive_url, filename}]}
   // Each room's photos are assigned sequentially to that room's records
+
+  // Detect decimal separator từ spreadsheet locale
+  // Non-English locales (de, vi, fr...) dùng ',' làm decimal trong formula
+  var ssLocale = ss.getSpreadsheetLocale() || '';
+  var decSep = /^en/.test(ssLocale) ? '.' : ',';
+
+  // Convert formula từ international (.) sang locale decimal (,) nếu cần
+  function localizeFormula(f) {
+    if (decSep === ',' && typeof f === 'string') {
+      return f.replace(/(\d)\.(\d)/g, '$1,$2'); // 1.3 → 1,3
+    }
+    return f;
+  }
+
   var sheet = ss.getSheetByName("DEM_APP");
   if (!sheet) {
     sheet = ss.insertSheet("DEM_APP");
@@ -375,25 +416,48 @@ function writeDemLe(ss, records, anhUrlsByRoom) {
     var sheetId = rec.sheet_id || generateId(rec.ma_phong);
 
     // Calculate So_Luong and Chieu_Dai from values array
-    // Luôn tính ra số — tránh lỗi #NUM! do locale Đức dùng dấu phẩy làm decimal
+    // Ghi formula string "=1.0+0.4+3.1..." để lưu audit trail đo đạc
     var soLuong = "";
     var chieuDai = "";
     var vals = rec.values || [];
     var hesoVal = rec.he_so || 1;
+
+    // formulaG/H: formula string để ghi vào col G (CHI_DEM) hoặc col H (CO_DAI) qua setFormula()
+    var formulaG = '';
+    var formulaH = '';
+
     if (vals.length > 0) {
-      // evalNum: tính giá trị từ expression string (e.g. "1.3+1.3" → 2.6)
-      var evalNum = function(v) {
-        var s = String(v == null ? 0 : v).replace(/[^0-9+\-*/().\s]/g, '');
-        if (!s.trim()) return 0;
-        try { var r = Function('"use strict";return(' + s + ')')(); return (isFinite(r) && r >= 0) ? r : 0; } catch(e) { return 0; }
-      };
       var total = 0;
-      for (var vi = 0; vi < vals.length; vi++) total += evalNum(vals[vi]);
-      if (rec.kieu_tinh === "CHI_DEM") {
-        soLuong = (total === Math.floor(total)) ? Math.floor(total) : Math.round(total * 100) / 100;
-      } else if (rec.kieu_tinh === "CO_DAI") {
-        chieuDai = Math.round(total * 100) / 100;
-        soLuong = hesoVal; // số lượng tuyến (×1/2/3/4)
+      for (var vi2 = 0; vi2 < vals.length; vi2++) total = total + calcExprVal(vals[vi2]);
+      total = Math.round(total * 100) / 100;
+
+      var isCoDai = (rec.kieu_tinh === 'CO_DAI') ||
+                    (rec.don_vi === 'm' && rec.kieu_tinh !== 'CHI_DEM');
+
+      // Build formula string
+      var fStr = '';
+      if (vals.length === 1) {
+        var v0 = vals[0];
+        if (typeof v0 === 'string' && /[+\-*/()]/.test(v0)) {
+          fStr = '=' + v0; // expression string như "6*2", "1.3+1.3", "1.6*2*2+..."
+        }
+        // single plain number → không cần formula
+      } else {
+        // multiple values → formula =a+b+c
+        fStr = '=' + vals.map(function(v) {
+          if (typeof v === 'string') return v;
+          var n = Number(v);
+          return (n === Math.floor(n)) ? String(Math.floor(n)) : String(Math.round(n * 100) / 100);
+        }).join('+');
+      }
+
+      if (isCoDai) {
+        chieuDai = total; // placeholder — setFormula() ghi đè nếu có fStr
+        soLuong  = hesoVal;
+        if (fStr) formulaH = fStr;
+      } else {
+        soLuong = (total === Math.floor(total)) ? Math.floor(total) : total;
+        if (fStr) formulaG = fStr;
       }
     }
     // Skip rows with no data (safety net — frontend already filters)
@@ -413,27 +477,34 @@ function writeDemLe(ss, records, anhUrlsByRoom) {
     var rowData = [
       sheetId,                    // A: ID
       rec.ma_phong,               // B: Ma_Phong
-      rec.nhom || "",             // C: Ma_LoaiCV (Heizung, Lüftung...)
+      rec.nhom || "",             // C: Ma_LoaiCV
       rec.ten_vl_german,          // D: Ten_VL_German
-      rec.grosse || "",           // E: Große (DN20...)
-      hesoVal,                    // F: He_So (×1/2/3/4 cho CO_DAI)
-      soLuong,                    // G: So_Luong (count, CHI_DEM only)
-      chieuDai,                   // H: Chieu_Dai (meters, CO_DAI only)
+      rec.grosse || "",           // E: Große
+      hesoVal,                    // F: He_So
+      soLuong,                    // G: So_Luong
+      chieuDai,                   // H: Chieu_Dai (số thực cho CO_DAI, formula =a+b+c cho CHI_DEM)
       now,                        // I: Ngay_Gio
       rec.don_vi || "",           // J: Don_vi
-      "Admin",                    // K: Nguoi_Dem (hardcoded for now)
-      anhUrl,                     // L: Anh_Hien_Truong (Drive link)
+      "Admin",                    // K: Nguoi_Dem
+      anhUrl,                     // L: Anh_Hien_Truong
       rec.ghi_chu || "",          // M: Ghi_Chu
       tenAnh,                     // N: Ten_Anh_Mong_Muon
-      rec.card_id || ""           // O: Card_ID (vd "040|Heizung+Kälte|note")
+      rec.card_id || ""           // O: Card_ID
     ];
 
     var existingRow = existingIds[sheetId];
+    var targetRow;
     if (existingRow) {
       sheet.getRange(existingRow, 1, 1, 15).setValues([rowData]);
+      targetRow = existingRow;
     } else {
       sheet.appendRow(rowData);
+      targetRow = sheet.getLastRow();
     }
+
+    // Ghi formula qua setFormula() — tránh appendRow parse formula sai locale
+    if (formulaG) { sheet.getRange(targetRow, 7).setFormula(formulaG); }
+    if (formulaH) { sheet.getRange(targetRow, 8).setFormula(formulaH); }
 
     mapped[rec.local_id] = sheetId;
   }
