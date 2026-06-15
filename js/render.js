@@ -92,6 +92,20 @@ async function renderS1(){
 
 // Open a card
 async function openCard(card){
+  try{
+    await openCardInner(card);
+  }catch(err){
+    console.error('openCard error:',err);
+    try{
+      await openDB();
+      await openCardInner(card);
+    }catch(err2){
+      console.error('openCard retry failed:',err2);
+      toast('Konnte Karte nicht oeffnen - Seite neu laden');
+    }
+  }
+}
+async function openCardInner(card){
   var all=await dbGetAll('phong');
   var ph=all.find(function(p){return p.ma_phong===card.ma_phong;});
   // Parse card_id để lấy lại danh sách Gewerke: "035|Heizung+Kälte|note"
