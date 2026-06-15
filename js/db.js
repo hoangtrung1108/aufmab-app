@@ -48,7 +48,7 @@ function uuid(){return 'xxxx-xxxx-xxxx'.replace(/x/g,function(){return(Math.rand
 // Parse Große → số để sort (DN25→25, M10→10, Befestigung→0)
 function _grNum(g){var m=(g||'').match(/\d+/);return m?parseInt(m[0]):0;}
 function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
-function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2000);}
+function toast(m,dur){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('show');},dur||2000);}
 function initGewerkChips(){
   selectedGewerke.clear();
   document.getElementById('ncGewCount').textContent='';

@@ -101,7 +101,7 @@ async function openCard(card){
       await openCardInner(card);
     }catch(err2){
       console.error('openCard retry failed:',err2);
-      toast('Konnte Karte nicht oeffnen - Seite neu laden');
+      toast('Fehler: '+(err2&&(err2.message||err2.name)||err2),8000);
     }
   }
 }
