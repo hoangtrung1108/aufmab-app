@@ -7,7 +7,7 @@
 // PULL ONLY — ↓ kéo dữ liệu từ Sheet về, không push lên
 // ============================================================
 async function pullOnly(){
-  if(IS_GAS&&!navigator.onLine){
+  if(IS_GAS&&(OFFLINE_MODE||!navigator.onLine)){
     toast('📡 Đang offline — không thể pull từ Sheet');
     return;
   }
@@ -247,11 +247,48 @@ async function processDemApp(demAppData){
   return count;
 }
 
+// ---- Offline mode management ----
+function setOfflineMode(on){
+  if(OFFLINE_MODE===on)return;
+  OFFLINE_MODE=on;
+  var badge=document.getElementById('offlineBadge');
+  if(badge)badge.style.display=on?'inline':'none';
+  if(on){
+    _gasFailCount=0;
+    toast('📡 Mạng yếu — chuyển offline, nhập bình thường',5000);
+  } else {
+    toast('🌐 Mạng ổn — bấm ↻ để sync',4000);
+  }
+}
+
+function _pingGAS(){
+  var ctrl=new AbortController();
+  var t=setTimeout(function(){ctrl.abort();},6000);
+  // no-cors: không cần đọc response, chỉ cần biết kết nối thành công
+  fetch(GAS_API+'?action=ping',{method:'GET',mode:'no-cors',signal:ctrl.signal})
+    .then(function(){clearTimeout(t);_gasFailCount=0;setOfflineMode(false);})
+    .catch(function(){clearTimeout(t);});
+}
+
+function initNetworkWatch(){
+  // Sự kiện offline từ trình duyệt → offline ngay lập tức
+  window.addEventListener('offline',function(){setOfflineMode(true);});
+  // Sự kiện online → không tin ngay, ping thật để xác nhận
+  window.addEventListener('online',function(){_pingGAS();});
+  // Mỗi 30s: nếu đang offline mà navigator.onLine=true → thử ping lại
+  setInterval(function(){if(OFFLINE_MODE&&navigator.onLine)_pingGAS();},30000);
+  // Đồng bộ trạng thái lúc khởi động
+  if(!navigator.onLine)setOfflineMode(true);
+}
+
 function gsRun(fn,arg){
+  if(OFFLINE_MODE)return Promise.reject(new Error('offline'));
   // Dùng fetch() → GAS API (chạy từ GitHub Pages, không cần google.script.run)
   return new Promise(function(ok,fail){
     var done=false;
-    var timer=setTimeout(function(){if(!done){done=true;fail(new Error('Timeout 15s — kiểm tra mạng'));}},15000);
+    var timer=setTimeout(function(){
+      if(!done){done=true;_gasFailCount++;if(_gasFailCount>=2)setOfflineMode(true);fail(new Error('Timeout 15s — kiểm tra mạng'));}
+    },15000);
     function wrap(cb){return function(v){if(!done){done=true;clearTimeout(timer);cb(v);}};}
     var url,opts;
     if(fn==='serverPull'){
@@ -264,13 +301,13 @@ function gsRun(fn,arg){
     }
     fetch(url,opts)
       .then(function(r){return r.text();})
-      .then(wrap(ok))
-      .catch(wrap(fail));
+      .then(function(v){_gasFailCount=0;wrap(ok)(v);})
+      .catch(function(e){_gasFailCount++;if(_gasFailCount>=2)setOfflineMode(true);wrap(fail)(e);});
   });
 }
 
 async function doSync(){
-  if(IS_GAS&&!navigator.onLine){
+  if(IS_GAS&&(OFFLINE_MODE||!navigator.onLine)){
     toast('📡 Offline — dữ liệu an toàn trong máy');
     return;
   }

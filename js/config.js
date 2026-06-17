@@ -108,6 +108,8 @@ var DN_PRESETS = {
 
 // ---- STATE ----
 var DB_NAME='AufmaBV3';var DB_VER=1;var db=null;
+var OFFLINE_MODE=false;   // true = bỏ qua mọi GAS call, nhập offline bình thường
+var _gasFailCount=0;      // đếm lỗi GAS liên tiếp → tự chuyển offline sau 2 lần
 var curPhong=null;
 var gewCollapseState={}; // gew -> true=collapsed
 var dnOpenState={};      // gew+'|'+dn -> true=open (trong summaryPanel)

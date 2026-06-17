@@ -78,4 +78,5 @@ async function init(){
   }
 }
 loadCustomData(); // Nạp Gewerk & DN tự tạo từ localStorage trước khi init
+initNetworkWatch(); // Theo dõi mạng: tự offline khi 4G chập chờn, ping lại khi phục hồi
 init();
