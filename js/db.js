@@ -12,8 +12,11 @@ function evalVal(v){
 }
 
 // ---- IndexedDB ----
+var _openingDB=null; // single-flight: tránh mở nhiều kết nối cùng lúc khi tự reconnect
 function openDB(){
-  return new Promise(function(ok,fail){
+  if(db)return Promise.resolve(db);
+  if(_openingDB)return _openingDB;
+  _openingDB=new Promise(function(ok,fail){
     var r=indexedDB.open(DB_NAME,DB_VER);
     r.onupgradeneeded=function(e){
       var d=e.target.result;
@@ -22,15 +25,30 @@ function openDB(){
       if(!d.objectStoreNames.contains('dem_le')){var s=d.createObjectStore('dem_le',{keyPath:'local_id'});s.createIndex('ma_phong','ma_phong',{unique:false});s.createIndex('sync_status','sync_status',{unique:false});}
       if(!d.objectStoreNames.contains('anh')){var s=d.createObjectStore('anh',{keyPath:'anh_id'});s.createIndex('ma_phong','ma_phong',{unique:false});}
     };
-    r.onsuccess=function(e){db=e.target.result;ok(db);};
-    r.onerror=function(e){fail(e.target.error);};
+    r.onsuccess=function(e){
+      db=e.target.result;
+      // iOS Safari hay đóng kết nối IndexedDB khi tab vào nền / giải phóng bộ nhớ.
+      // Khi đó đặt db=null để lần gọi sau tự mở lại (xem _tx bên dưới).
+      db.onclose=function(){db=null;};
+      db.onversionchange=function(){try{db.close();}catch(_){}db=null;};
+      _openingDB=null;ok(db);
+    };
+    r.onerror=function(e){_openingDB=null;fail(e.target.error);};
   });
+  return _openingDB;
 }
-function dbPut(s,d){return new Promise(function(ok,fail){var tx=db.transaction(s,'readwrite');tx.objectStore(s).put(d);tx.oncomplete=ok;tx.onerror=function(e){fail(e.target.error);}});}
-function dbGetAll(s){return new Promise(function(ok,fail){var tx=db.transaction(s,'readonly');var r=tx.objectStore(s).getAll();r.onsuccess=function(){ok(r.result);};r.onerror=function(e){fail(e.target.error);}});}
-function dbGet(s,k){return new Promise(function(ok,fail){var tx=db.transaction(s,'readonly');var r=tx.objectStore(s).get(k);r.onsuccess=function(){ok(r.result);};r.onerror=function(e){fail(e.target.error);}});}
-function dbIdx(s,idx,v){return new Promise(function(ok,fail){var tx=db.transaction(s,'readonly');var r=tx.objectStore(s).index(idx).getAll(v);r.onsuccess=function(){ok(r.result);};r.onerror=function(e){fail(e.target.error);}});}
-function dbDel(s,k){return new Promise(function(ok,fail){var tx=db.transaction(s,'readwrite');tx.objectStore(s).delete(k);tx.oncomplete=ok;tx.onerror=function(e){fail(e.target.error);}});}
+// Lấy transaction an toàn: nếu db null hoặc kết nối đã đóng (iOS background) → mở lại rồi thử lần nữa.
+// Đây là root-fix cho lỗi "bấm thẻ không mở được / không nhập được giá trị" sau khi máy reload.
+async function _tx(store,mode){
+  if(!db)await openDB();
+  try{return db.transaction(store,mode);}
+  catch(e){db=null;await openDB();return db.transaction(store,mode);}
+}
+function dbPut(s,d){return _tx(s,'readwrite').then(function(tx){return new Promise(function(ok,fail){tx.objectStore(s).put(d);tx.oncomplete=ok;tx.onerror=function(e){fail(e.target.error);}});});}
+function dbGetAll(s){return _tx(s,'readonly').then(function(tx){return new Promise(function(ok,fail){var r=tx.objectStore(s).getAll();r.onsuccess=function(){ok(r.result);};r.onerror=function(e){fail(e.target.error);}});});}
+function dbGet(s,k){return _tx(s,'readonly').then(function(tx){return new Promise(function(ok,fail){var r=tx.objectStore(s).get(k);r.onsuccess=function(){ok(r.result);};r.onerror=function(e){fail(e.target.error);}});});}
+function dbIdx(s,idx,v){return _tx(s,'readonly').then(function(tx){return new Promise(function(ok,fail){var r=tx.objectStore(s).index(idx).getAll(v);r.onsuccess=function(){ok(r.result);};r.onerror=function(e){fail(e.target.error);}});});}
+function dbDel(s,k){return _tx(s,'readwrite').then(function(tx){return new Promise(function(ok,fail){tx.objectStore(s).delete(k);tx.oncomplete=ok;tx.onerror=function(e){fail(e.target.error);}});});}
 // Ghi vat_lieu từ Sheet về sao cho store khớp ĐÚNG với Sheet:
 // xóa các record cũ KHÔNG phải do user tự thêm (is_new) và không còn trong list mới,
 // sau đó upsert toàn bộ list mới. → vật liệu bị đổi tên/xóa trên Sheet sẽ biến mất khỏi app.
